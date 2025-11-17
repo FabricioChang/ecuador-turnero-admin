@@ -139,6 +139,7 @@ export default function Roles() {
   const [editando, setEditando] = useState<Rol | null>(null);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>("");
   const [esAdministrador, setEsAdministrador] = useState(false);
+  const [categoriasTabla, setCategoriasTabla] = useState<Record<number, string>>({});
   const { toast } = useToast();
   
   const todosLosPermisos = permisosDisponibles.map(p => p.id);
@@ -372,6 +373,14 @@ export default function Roles() {
           <TableBody>
             {roles.map((r) => {
               const esAdmin = tieneTodasLosPermisos(r.permisos);
+              const categoriaActual = categoriasTabla[r.id] || "";
+              const permisosCategoria = categoriaActual
+                ? r.permisos.filter(p => {
+                    const cat = categorias.find(c => c.nombre === categoriaActual);
+                    return cat?.permisos.some(perm => perm.id === p);
+                  })
+                : [];
+              
               return (
                 <TableRow key={r.id}>
                   <TableCell>
@@ -388,10 +397,40 @@ export default function Roles() {
                     {esAdmin ? (
                       <Badge variant="secondary">Todos los permisos</Badge>
                     ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {r.permisos.map((p) => (
-                          <Badge key={p} variant="secondary">{etiquetaPermiso(p)}</Badge>
-                        ))}
+                      <div className="flex items-center gap-3">
+                        <Select 
+                          value={categoriaActual} 
+                          onValueChange={(val) => setCategoriasTabla(prev => ({ ...prev, [r.id]: val }))}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Selecciona categoría" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categorias.map((cat) => {
+                              const tienePermisosEnCategoria = cat.permisos.some(p => r.permisos.includes(p.id));
+                              if (!tienePermisosEnCategoria) return null;
+                              return (
+                                <SelectItem key={cat.nombre} value={cat.nombre}>
+                                  {cat.nombre}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                        {categoriaActual && (
+                          <div className="flex flex-wrap gap-2">
+                            {permisosCategoria.map((p) => {
+                              const permiso = categorias
+                                .find(c => c.nombre === categoriaActual)
+                                ?.permisos.find(perm => perm.id === p);
+                              return (
+                                <Badge key={p} variant="secondary">
+                                  {permiso?.label || p}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </TableCell>
