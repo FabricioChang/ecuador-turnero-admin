@@ -36,7 +36,12 @@ const NuevaSucursal = () => {
     provincia_id: "",
     canton_id: "",
     direccion: "",
+    email: "",
+    telefono_sms: "",
+    capacidad_maxima: "",
   });
+  
+  const [selectedRegion, setSelectedRegion] = useState("");
 
   const [searchKioskos, setSearchKioskos] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
@@ -48,21 +53,21 @@ const NuevaSucursal = () => {
 
   // Cargar datos desde la base de datos
   const { regiones } = useRegiones();
-  const { data: provincias = [], isLoading: loadingProvincias } = useProvincias();
-  const { data: cantones = [], isLoading: loadingCantones } = useCantones();
+  const provincias = useProvincias();
+  const cantones = useCantones(formData.provincia_id);
 
   // Filtrar provincias por región seleccionada
   const provinciasFiltradas = useMemo(() => {
-    if (!regionFilter) return provincias;
+    if (!regionFilter) return provincias.data || [];
     const regionSeleccionada = regiones.find(r => r.id === regionFilter);
-    return provincias.filter(p => regionSeleccionada?.provincias.includes(p.nombre));
-  }, [regionFilter, provincias, regiones]);
+    return (provincias.data || []).filter(p => regionSeleccionada?.provincias.includes(p.nombre));
+  }, [regionFilter, provincias.data, regiones]);
 
   // Filtrar cantones por provincia seleccionada en el formulario
   const cantonesFiltrados = useMemo(() => {
     if (!formData.provincia_id) return [];
-    return cantones.filter(c => c.provincia_id === formData.provincia_id);
-  }, [formData.provincia_id, cantones]);
+    return (cantones.data || []).filter(c => c.provincia_id === formData.provincia_id);
+  }, [formData.provincia_id, cantones.data]);
 
   const kioskosDisponibles: Kiosko[] = [
     {
@@ -301,7 +306,7 @@ const NuevaSucursal = () => {
                     <SelectValue placeholder="Seleccionar provincia" />
                   </SelectTrigger>
                   <SelectContent>
-                    {provincias.map((provincia) => (
+                    {provinciasFiltradas.map((provincia) => (
                       <SelectItem key={provincia.id} value={provincia.id}>
                         {provincia.nombre}
                       </SelectItem>
@@ -378,7 +383,7 @@ const NuevaSucursal = () => {
                   <Select 
                     value={provinciaFilter} 
                     onValueChange={handleProvinciaChange}
-                    disabled={loadingProvincias}
+                    disabled={provincias.isLoading}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Provincia" />
@@ -397,7 +402,7 @@ const NuevaSucursal = () => {
                   <Select 
                     value={ciudadFilter} 
                     onValueChange={setCiudadFilter}
-                    disabled={!provinciaFilter || provinciaFilter === "all" || loadingCantones}
+                    disabled={!provinciaFilter || provinciaFilter === "all" || cantones.isLoading}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Ciudad" />

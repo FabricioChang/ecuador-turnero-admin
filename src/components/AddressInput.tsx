@@ -5,6 +5,9 @@ import { MapPin, Loader2, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Provincia } from "@/hooks/useProvincias";
+import { Canton } from "@/hooks/useCantones";
+import { Region } from "@/hooks/useRegiones";
 
 // Fix para los iconos de Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -23,9 +26,26 @@ interface AddressInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   id?: string;
+  provincias?: Provincia[];
+  cantones?: Canton[];
+  regiones?: Region[];
+  onProvinciaChange?: (provinciaId: string) => void;
+  onCantonChange?: (cantonId: string) => void;
+  onRegionChange?: (regionNombre: string) => void;
 }
 
-export const AddressInput = ({ value, onChange, placeholder, id }: AddressInputProps) => {
+export const AddressInput = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  id,
+  provincias = [],
+  cantones = [],
+  regiones = [],
+  onProvinciaChange,
+  onCantonChange,
+  onRegionChange
+}: AddressInputProps) => {
   const [loading, setLoading] = useState(false);
   const [mapPosition, setMapPosition] = useState<[number, number]>([-0.1807, -78.4678]); // Quito por defecto
   const [showMap, setShowMap] = useState(false);
@@ -83,9 +103,64 @@ export const AddressInput = ({ value, onChange, placeholder, id }: AddressInputP
       if (!response.ok) throw new Error('Error al obtener la dirección');
       
       const data = await response.json();
-      const address = data.display_name || `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
       
-      onChange(address);
+      // Extraer provincia y cantón del resultado
+      const addressData = data.address || {};
+      const provinciaName = addressData.state || addressData.province;
+      const cantonName = addressData.city || addressData.town || addressData.municipality;
+      
+      // Buscar provincia en la lista
+      if (provinciaName && provincias.length > 0) {
+        const provincia = provincias.find(p => 
+          p.nombre.toLowerCase().includes(provinciaName.toLowerCase()) ||
+          provinciaName.toLowerCase().includes(p.nombre.toLowerCase())
+        );
+        
+        if (provincia && onProvinciaChange) {
+          onProvinciaChange(provincia.id);
+          
+          // Buscar región basada en la provincia
+          if (regiones.length > 0 && onRegionChange) {
+            const region = regiones.find(r => 
+              r.provincias.some(p => p.toLowerCase() === provincia.nombre.toLowerCase())
+            );
+            if (region) {
+              onRegionChange(region.nombre);
+            }
+          }
+          
+          // Buscar cantón en la lista
+          if (cantonName && cantones.length > 0) {
+            const canton = cantones.find(c => 
+              c.provincia_id === provincia.id && (
+                c.nombre.toLowerCase().includes(cantonName.toLowerCase()) ||
+                cantonName.toLowerCase().includes(c.nombre.toLowerCase())
+              )
+            );
+            if (canton && onCantonChange) {
+              onCantonChange(canton.id);
+            }
+          }
+        }
+      }
+      
+      // Formatear dirección sin provincia y cantón
+      let formattedAddress = data.display_name || `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+      
+      // Filtrar partes de la dirección para omitir provincia y cantón
+      if (addressData) {
+        const parts = [];
+        if (addressData.road) parts.push(addressData.road);
+        if (addressData.house_number) parts.push(addressData.house_number);
+        if (addressData.neighbourhood) parts.push(addressData.neighbourhood);
+        if (addressData.suburb) parts.push(addressData.suburb);
+        
+        if (parts.length > 0) {
+          formattedAddress = parts.join(', ');
+        }
+      }
+      
+      onChange(formattedAddress);
     } catch (error) {
       onChange(`Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`);
     } finally {
