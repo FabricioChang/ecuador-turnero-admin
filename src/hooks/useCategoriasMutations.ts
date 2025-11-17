@@ -14,14 +14,17 @@ export const useCreateCategoria = () => {
       color?: string;
       estado?: string;
     }) => {
-      const { data: result, error } = await supabase
-        .from("categorias")
-        .insert([data])
-        .select()
-        .single();
+      const { data: newId, error } = await supabase.rpc('create_categoria', {
+        _nombre: data.nombre,
+        _color: data.color || '#000000',
+        _tiempo_estimado: data.tiempo_estimado || 15,
+        _sucursal_id: data.sucursal_id || null,
+        _descripcion: data.descripcion || null,
+        _estado: data.estado || 'activo'
+      });
       
       if (error) throw error;
-      return result;
+      return { id: newId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categorias"] });
@@ -44,7 +47,7 @@ export const useUpdateCategoria = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, ...data }: {
+    mutationFn: async ({ id, nombre, descripcion, tiempo_estimado, sucursal_id, color, estado }: {
       id: string;
       nombre?: string;
       descripcion?: string;
@@ -53,15 +56,18 @@ export const useUpdateCategoria = () => {
       color?: string;
       estado?: string;
     }) => {
-      const { data: result, error } = await supabase
-        .from("categorias")
-        .update(data)
-        .eq("id", id)
-        .select()
-        .single();
+      const { data: success, error } = await supabase.rpc('update_categoria', {
+        _id: id,
+        _nombre: nombre!,
+        _color: color || '#000000',
+        _tiempo_estimado: tiempo_estimado || 15,
+        _sucursal_id: sucursal_id || null,
+        _descripcion: descripcion || null,
+        _estado: estado || 'activo'
+      });
       
       if (error) throw error;
-      return result;
+      return success;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categorias"] });

@@ -611,6 +611,67 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_user_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: string
+      }
+      create_categoria: {
+        Args: {
+          _color?: string
+          _descripcion?: string
+          _estado?: string
+          _nombre: string
+          _sucursal_id?: string
+          _tiempo_estimado?: number
+        }
+        Returns: string
+      }
+      create_kiosko: {
+        Args: {
+          _estado?: Database["public"]["Enums"]["estado_kiosko"]
+          _identificador: string
+          _nombre: string
+          _sucursal_id: string
+          _ubicacion?: string
+        }
+        Returns: string
+      }
+      create_pantalla: {
+        Args: {
+          _estado?: string
+          _identificador: string
+          _nombre: string
+          _sucursal_id: string
+        }
+        Returns: string
+      }
+      create_publicidad: {
+        Args: {
+          _duracion?: number
+          _estado?: string
+          _nombre: string
+          _tipo: Database["public"]["Enums"]["tipo_publicidad"]
+          _url_archivo: string
+        }
+        Returns: string
+      }
+      create_sucursal: {
+        Args: {
+          _canton_id: string
+          _capacidad_maxima?: number
+          _direccion?: string
+          _email?: string
+          _estado?: string
+          _identificador: string
+          _nombre: string
+          _provincia_id: string
+          _telefono_sms?: string
+        }
+        Returns: string
+      }
       generate_kiosko_identifier: { Args: never; Returns: string }
       generate_pantalla_identifier: { Args: never; Returns: string }
       generate_sucursal_identifier: { Args: never; Returns: string }
@@ -626,6 +687,62 @@ export type Database = {
         Args: {
           _permission_name: string
           _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
+      update_categoria: {
+        Args: {
+          _color: string
+          _descripcion?: string
+          _estado?: string
+          _id: string
+          _nombre: string
+          _sucursal_id?: string
+          _tiempo_estimado: number
+        }
+        Returns: boolean
+      }
+      update_kiosko: {
+        Args: {
+          _estado?: Database["public"]["Enums"]["estado_kiosko"]
+          _id: string
+          _nombre: string
+          _sucursal_id: string
+          _ubicacion?: string
+        }
+        Returns: boolean
+      }
+      update_pantalla: {
+        Args: {
+          _estado?: string
+          _id: string
+          _nombre: string
+          _sucursal_id: string
+        }
+        Returns: boolean
+      }
+      update_publicidad: {
+        Args: {
+          _duracion?: number
+          _estado?: string
+          _id: string
+          _nombre: string
+          _tipo: Database["public"]["Enums"]["tipo_publicidad"]
+          _url_archivo: string
+        }
+        Returns: boolean
+      }
+      update_sucursal: {
+        Args: {
+          _canton_id: string
+          _capacidad_maxima?: number
+          _direccion?: string
+          _email?: string
+          _estado?: string
+          _id: string
+          _nombre: string
+          _provincia_id: string
+          _telefono_sms?: string
         }
         Returns: boolean
       }
