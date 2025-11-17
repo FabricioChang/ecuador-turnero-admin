@@ -12,17 +12,16 @@ export const useCreateKiosko = () => {
       ubicacion?: string;
       estado?: 'activo' | 'inactivo' | 'mantenimiento';
     }) => {
-      const { data: result, error } = await supabase
-        .from("kioskos")
-        .insert([{
-          ...data,
-          identificador: '', // Se genera automáticamente
-        }])
-        .select()
-        .single();
+      const { data: newId, error } = await supabase.rpc('create_kiosko', {
+        _nombre: data.nombre,
+        _identificador: '',
+        _sucursal_id: data.sucursal_id,
+        _ubicacion: data.ubicacion || null,
+        _estado: data.estado || 'activo'
+      });
       
       if (error) throw error;
-      return result;
+      return { id: newId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kioskos"] });
@@ -45,22 +44,23 @@ export const useUpdateKiosko = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, ...data }: {
+    mutationFn: async ({ id, nombre, sucursal_id, ubicacion, estado }: {
       id: string;
       nombre?: string;
       sucursal_id?: string;
       ubicacion?: string;
       estado?: 'activo' | 'inactivo' | 'mantenimiento';
     }) => {
-      const { data: result, error } = await supabase
-        .from("kioskos")
-        .update(data)
-        .eq("id", id)
-        .select()
-        .single();
+      const { data: success, error } = await supabase.rpc('update_kiosko', {
+        _id: id,
+        _nombre: nombre!,
+        _sucursal_id: sucursal_id!,
+        _ubicacion: ubicacion || null,
+        _estado: estado || 'activo'
+      });
       
       if (error) throw error;
-      return result;
+      return success;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kioskos"] });

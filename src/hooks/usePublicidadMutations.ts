@@ -13,14 +13,16 @@ export const useCreatePublicidad = () => {
       duracion?: number;
       estado?: string;
     }) => {
-      const { data: result, error } = await supabase
-        .from("publicidad")
-        .insert([data])
-        .select()
-        .single();
+      const { data: newId, error } = await supabase.rpc('create_publicidad', {
+        _nombre: data.nombre,
+        _tipo: data.tipo,
+        _url_archivo: data.url_archivo,
+        _duracion: data.duracion || 10,
+        _estado: data.estado || 'activa'
+      });
       
       if (error) throw error;
-      return result;
+      return { id: newId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["publicidad"] });
@@ -43,7 +45,7 @@ export const useUpdatePublicidad = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, ...data }: {
+    mutationFn: async ({ id, nombre, tipo, url_archivo, duracion, estado }: {
       id: string;
       nombre?: string;
       tipo?: 'imagen' | 'video';
@@ -51,15 +53,17 @@ export const useUpdatePublicidad = () => {
       duracion?: number;
       estado?: string;
     }) => {
-      const { data: result, error } = await supabase
-        .from("publicidad")
-        .update(data)
-        .eq("id", id)
-        .select()
-        .single();
+      const { data: success, error } = await supabase.rpc('update_publicidad', {
+        _id: id,
+        _nombre: nombre!,
+        _tipo: tipo!,
+        _url_archivo: url_archivo!,
+        _duracion: duracion || 10,
+        _estado: estado || 'activa'
+      });
       
       if (error) throw error;
-      return result;
+      return success;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["publicidad"] });

@@ -29,18 +29,13 @@ export const useAsignarRol = () => {
 
   return useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      // Primero eliminar roles existentes
-      await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
-
-      // Insertar el nuevo rol
-      const { error } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role });
+      const { data: newId, error } = await supabase.rpc('assign_user_role', {
+        _user_id: userId,
+        _role: role
+      });
 
       if (error) throw error;
+      return newId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["usuario_roles"] });

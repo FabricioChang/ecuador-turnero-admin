@@ -11,17 +11,15 @@ export const useCreatePantalla = () => {
       sucursal_id: string;
       estado?: string;
     }) => {
-      const { data: result, error } = await supabase
-        .from("pantallas")
-        .insert([{
-          ...data,
-          identificador: '', // El trigger lo generará automáticamente
-        }])
-        .select()
-        .single();
+      const { data: newId, error } = await supabase.rpc('create_pantalla', {
+        _nombre: data.nombre,
+        _identificador: '',
+        _sucursal_id: data.sucursal_id,
+        _estado: data.estado || 'activa'
+      });
       
       if (error) throw error;
-      return result;
+      return { id: newId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pantallas"] });
@@ -44,21 +42,21 @@ export const useUpdatePantalla = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, ...data }: {
+    mutationFn: async ({ id, nombre, sucursal_id, estado }: {
       id: string;
       nombre?: string;
       sucursal_id?: string;
       estado?: string;
     }) => {
-      const { data: result, error } = await supabase
-        .from("pantallas")
-        .update(data)
-        .eq("id", id)
-        .select()
-        .single();
+      const { data: success, error } = await supabase.rpc('update_pantalla', {
+        _id: id,
+        _nombre: nombre!,
+        _sucursal_id: sucursal_id!,
+        _estado: estado || 'activa'
+      });
       
       if (error) throw error;
-      return result;
+      return success;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pantallas"] });
