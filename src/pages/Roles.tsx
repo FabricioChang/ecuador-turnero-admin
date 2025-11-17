@@ -16,6 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCaption,
@@ -130,6 +137,7 @@ export default function Roles() {
   const [roles, setRoles] = useState<Rol[]>(inicial);
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState<Rol | null>(null);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>("");
   const { toast } = useToast();
 
   // SEO básico
@@ -170,12 +178,14 @@ export default function Roles() {
   const onNuevo = () => {
     setEditando(null);
     form.reset({ nombre: "", permisos: [] });
+    setCategoriaSeleccionada("");
     setOpen(true);
   };
 
   const onEditar = (r: Rol) => {
     setEditando(r);
     form.reset({ nombre: r.nombre, permisos: r.permisos });
+    setCategoriaSeleccionada("");
     setOpen(true);
   };
 
@@ -234,41 +244,60 @@ export default function Roles() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="permisos"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Permisos por Categoría</FormLabel>
-                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                        {categorias.map((categoria) => (
-                          <div key={categoria.nombre} className="border rounded-lg p-4 space-y-3">
-                            <h4 className="font-medium text-sm">{categoria.nombre}</h4>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Categoría</Label>
+                    <Select value={categoriaSeleccionada} onValueChange={setCategoriaSeleccionada}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categorias.map((cat) => (
+                          <SelectItem key={cat.nombre} value={cat.nombre}>
+                            {cat.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="permisos"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Permisos</FormLabel>
+                        {categoriaSeleccionada ? (
+                          <div className="border rounded-lg p-4 space-y-3">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {categoria.permisos.map((perm) => {
-                                const checked = field.value?.includes(perm.id);
-                                return (
-                                  <label key={perm.id} className="flex items-center gap-2 cursor-pointer">
-                                    <Checkbox
-                                      checked={checked}
-                                      onCheckedChange={(v) => {
-                                        const isChecked = Boolean(v);
-                                        if (isChecked) field.onChange([...(field.value ?? []), perm.id]);
-                                        else field.onChange((field.value ?? []).filter((p: string) => p !== perm.id));
-                                      }}
-                                    />
-                                    <span className="text-sm">{perm.label}</span>
-                                  </label>
-                                );
-                              })}
+                              {categorias
+                                .find((cat) => cat.nombre === categoriaSeleccionada)
+                                ?.permisos.map((perm) => {
+                                  const checked = field.value?.includes(perm.id);
+                                  return (
+                                    <label key={perm.id} className="flex items-center gap-2 cursor-pointer">
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(v) => {
+                                          const isChecked = Boolean(v);
+                                          if (isChecked) field.onChange([...(field.value ?? []), perm.id]);
+                                          else field.onChange((field.value ?? []).filter((p: string) => p !== perm.id));
+                                        }}
+                                      />
+                                      <span className="text-sm">{perm.label}</span>
+                                    </label>
+                                  );
+                                })}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Selecciona una categoría para ver sus permisos</p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <DialogFooter>
                   <Button type="submit">{editando ? "Guardar cambios" : "Crear rol"}</Button>
