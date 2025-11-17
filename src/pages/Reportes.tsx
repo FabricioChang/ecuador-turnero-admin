@@ -14,8 +14,11 @@ import { useReportes } from "@/hooks/useReportes";
 import { useSucursales } from "@/hooks/useSucursales";
 import { useKioskos } from "@/hooks/useKioskos";
 import { useCategorias } from "@/hooks/useCategorias";
+import { exportReportToCSV } from "@/utils/exportReportes";
+import { useToast } from "@/hooks/use-toast";
 
 const Reportes = () => {
+  const { toast } = useToast();
   const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [selectedSucursal, setSelectedSucursal] = useState<string>("all");
@@ -27,6 +30,23 @@ const Reportes = () => {
   const { data: categoriasData = [] } = useCategorias();
   
   const { data: reportData, isLoading } = useReportes(dateFrom, dateTo, selectedSucursal, selectedKiosko, selectedCategoria);
+
+  const handleExport = () => {
+    if (!reportData) {
+      toast({
+        title: "No hay datos",
+        description: "No hay datos disponibles para exportar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    exportReportToCSV(reportData, dateFrom, dateTo);
+    toast({
+      title: "Reporte exportado",
+      description: "El reporte se ha descargado correctamente",
+    });
+  };
 
   const sucursales = sucursalesData.map((s: any) => ({ id: s.id, nombre: s.nombre }));
   const kioskos = kioskosData.map((k: any) => ({ id: k.id, identificador: k.identificador, nombre: k.nombre }));
@@ -84,7 +104,7 @@ const Reportes = () => {
           <h1 className="text-2xl font-semibold text-admin-text-primary">Reportes</h1>
           <p className="text-admin-text-secondary">Informes y estadísticas del sistema turnero</p>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleExport} disabled={!reportData || isLoading}>
           <Download className="h-4 w-4 mr-2" />
           Exportar
         </Button>
