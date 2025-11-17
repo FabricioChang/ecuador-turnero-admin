@@ -43,6 +43,195 @@ export type Database = {
           },
         ]
       }
+      categorias: {
+        Row: {
+          color: string
+          created_at: string
+          descripcion: string | null
+          estado: string
+          id: string
+          nombre: string
+          sucursal_id: string | null
+          tiempo_estimado: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          descripcion?: string | null
+          estado?: string
+          id?: string
+          nombre: string
+          sucursal_id?: string | null
+          tiempo_estimado?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          descripcion?: string | null
+          estado?: string
+          id?: string
+          nombre?: string
+          sucursal_id?: string | null
+          tiempo_estimado?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorias_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kioskos: {
+        Row: {
+          created_at: string
+          estado: Database["public"]["Enums"]["estado_kiosko"]
+          id: string
+          identificador: string
+          nombre: string
+          sucursal_id: string
+          ubicacion: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_kiosko"]
+          id?: string
+          identificador: string
+          nombre: string
+          sucursal_id: string
+          ubicacion?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_kiosko"]
+          id?: string
+          identificador?: string
+          nombre?: string
+          sucursal_id?: string
+          ubicacion?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kioskos_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pantalla_publicidad: {
+        Row: {
+          created_at: string
+          id: string
+          orden: number
+          pantalla_id: string
+          publicidad_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          orden?: number
+          pantalla_id: string
+          publicidad_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          orden?: number
+          pantalla_id?: string
+          publicidad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pantalla_publicidad_pantalla_id_fkey"
+            columns: ["pantalla_id"]
+            isOneToOne: false
+            referencedRelation: "pantallas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pantalla_publicidad_publicidad_id_fkey"
+            columns: ["publicidad_id"]
+            isOneToOne: false
+            referencedRelation: "publicidad"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pantallas: {
+        Row: {
+          created_at: string
+          estado: string
+          id: string
+          identificador: string
+          nombre: string
+          sucursal_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estado?: string
+          id?: string
+          identificador: string
+          nombre: string
+          sucursal_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estado?: string
+          id?: string
+          identificador?: string
+          nombre?: string
+          sucursal_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pantallas_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nombre: string
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          nombre: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nombre?: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       provincias: {
         Row: {
           codigo: string
@@ -64,15 +253,225 @@ export type Database = {
         }
         Relationships: []
       }
+      publicidad: {
+        Row: {
+          created_at: string
+          duracion: number
+          estado: string
+          fecha_creacion: string
+          id: string
+          nombre: string
+          tipo: Database["public"]["Enums"]["tipo_publicidad"]
+          updated_at: string
+          url_archivo: string
+        }
+        Insert: {
+          created_at?: string
+          duracion?: number
+          estado?: string
+          fecha_creacion?: string
+          id?: string
+          nombre: string
+          tipo: Database["public"]["Enums"]["tipo_publicidad"]
+          updated_at?: string
+          url_archivo: string
+        }
+        Update: {
+          created_at?: string
+          duracion?: number
+          estado?: string
+          fecha_creacion?: string
+          id?: string
+          nombre?: string
+          tipo?: Database["public"]["Enums"]["tipo_publicidad"]
+          updated_at?: string
+          url_archivo?: string
+        }
+        Relationships: []
+      }
+      sucursales: {
+        Row: {
+          canton_id: string
+          created_at: string
+          direccion: string | null
+          email: string | null
+          estado: string
+          id: string
+          identificador: string
+          nombre: string
+          provincia_id: string
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          canton_id: string
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          estado?: string
+          id?: string
+          identificador: string
+          nombre: string
+          provincia_id: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canton_id?: string
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          estado?: string
+          id?: string
+          identificador?: string
+          nombre?: string
+          provincia_id?: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sucursales_canton_id_fkey"
+            columns: ["canton_id"]
+            isOneToOne: false
+            referencedRelation: "cantones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sucursales_provincia_id_fkey"
+            columns: ["provincia_id"]
+            isOneToOne: false
+            referencedRelation: "provincias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turnos: {
+        Row: {
+          categoria_id: string
+          cliente_identificacion: string | null
+          cliente_nombre: string | null
+          created_at: string
+          estado: Database["public"]["Enums"]["estado_turno"]
+          fecha_atencion: string | null
+          fecha_creacion: string
+          fecha_finalizacion: string | null
+          fecha_llamado: string | null
+          id: string
+          kiosko_id: string | null
+          numero: string
+          sucursal_id: string
+          tiempo_atencion: number | null
+          tiempo_espera: number | null
+          updated_at: string
+        }
+        Insert: {
+          categoria_id: string
+          cliente_identificacion?: string | null
+          cliente_nombre?: string | null
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_turno"]
+          fecha_atencion?: string | null
+          fecha_creacion?: string
+          fecha_finalizacion?: string | null
+          fecha_llamado?: string | null
+          id?: string
+          kiosko_id?: string | null
+          numero: string
+          sucursal_id: string
+          tiempo_atencion?: number | null
+          tiempo_espera?: number | null
+          updated_at?: string
+        }
+        Update: {
+          categoria_id?: string
+          cliente_identificacion?: string | null
+          cliente_nombre?: string | null
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_turno"]
+          fecha_atencion?: string | null
+          fecha_creacion?: string
+          fecha_finalizacion?: string | null
+          fecha_llamado?: string | null
+          id?: string
+          kiosko_id?: string | null
+          numero?: string
+          sucursal_id?: string
+          tiempo_atencion?: number | null
+          tiempo_espera?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turnos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_kiosko_id_fkey"
+            columns: ["kiosko_id"]
+            isOneToOne: false
+            referencedRelation: "kioskos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operador" | "supervisor" | "usuario"
+      estado_kiosko: "activo" | "inactivo" | "mantenimiento"
+      estado_turno: "pendiente" | "en_atencion" | "atendido" | "cancelado"
+      tipo_publicidad: "imagen" | "video"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -199,6 +598,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operador", "supervisor", "usuario"],
+      estado_kiosko: ["activo", "inactivo", "mantenimiento"],
+      estado_turno: ["pendiente", "en_atencion", "atendido", "cancelado"],
+      tipo_publicidad: ["imagen", "video"],
+    },
   },
 } as const
