@@ -289,7 +289,7 @@ export default function Usuarios() {
 
           if (profileError) throw profileError;
 
-          // Asignar rol si se especificó
+          // Assign role if specified
           if (values.role) {
             await asignarRol.mutateAsync({
               userId: authData.user.id,
@@ -304,6 +304,7 @@ export default function Usuarios() {
         });
       }
 
+      form.reset();
       setOpen(false);
     } catch (error: any) {
       toast({

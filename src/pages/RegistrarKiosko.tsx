@@ -122,6 +122,52 @@ const RegistrarKiosko = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+              {/* Nombre y Estado arriba */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Nombre */}
+                <div className="space-y-2">
+                  <Label htmlFor="nombre" className="text-admin-text-primary">Nombre del kiosko</Label>
+                  <Input
+                    id="nombre"
+                    value={form.nombre}
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, nombre: e.target.value }));
+                      if (errors.nombre) setErrors((er) => ({ ...er, nombre: "" }));
+                    }}
+                    placeholder="Ej: Kiosko Principal Centro"
+                    className={`bg-admin-background border-admin-border-light ${errors.nombre ? "border-red-500" : ""}`}
+                  />
+                  {errors.nombre && <p className="text-xs text-red-500 mt-1">{errors.nombre}</p>}
+                </div>
+
+                {/* Estado */}
+                <div className="space-y-2">
+                  <Label htmlFor="estado" className="text-admin-text-primary">Estado operativo</Label>
+                  <Select 
+                    value={form.estado} 
+                    onValueChange={(value) => {
+                      setForm((f) => ({ ...f, estado: value }));
+                      if (errors.estado) setErrors((er) => ({ ...er, estado: "" }));
+                    }}
+                  >
+                    <SelectTrigger 
+                      id="estado" 
+                      className={`bg-admin-background border-admin-border-light ${errors.estado ? "border-red-500" : ""}`}
+                    >
+                      <SelectValue placeholder="Seleccione estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {estados.map((e) => (
+                        <SelectItem key={e} value={e}>
+                          {e.charAt(0).toUpperCase() + e.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.estado && <p className="text-xs text-red-500 mt-1">{errors.estado}</p>}
+                </div>
+              </div>
+
               {/* Filtros para buscar sucursal */}
               <Card className="bg-admin-background border-admin-border-light">
                 <CardHeader>
@@ -181,27 +227,10 @@ const RegistrarKiosko = () => {
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Nombre */}
-                <div className="space-y-2">
-                  <Label htmlFor="nombre" className="text-admin-text-primary">Nombre del kiosko</Label>
-                  <Input
-                    id="nombre"
-                    value={form.nombre}
-                    onChange={(e) => {
-                      setForm((f) => ({ ...f, nombre: e.target.value }));
-                      if (errors.nombre) setErrors((er) => ({ ...er, nombre: "" }));
-                    }}
-                    placeholder="Ej: Kiosko Principal Centro"
-                    className={`bg-admin-background border-admin-border-light ${errors.nombre ? "border-red-500" : ""}`}
-                  />
-                  {errors.nombre && <p className="text-sm text-red-500">{errors.nombre}</p>}
-                </div>
-
-                {/* Sucursal asignada (ahora editable) */}
-                <div className="space-y-2">
-                  <Label className="text-admin-text-primary">Sucursal asignada</Label>
-                  <Select
+              {/* Sucursal asignada */}
+              <div className="space-y-2">
+                <Label className="text-admin-text-primary">Sucursal asignada</Label>
+                <Select
                     value={form.sucursalId}
                     onValueChange={(val) => {
                       setForm((f) => ({ ...f, sucursalId: val }));
@@ -221,29 +250,6 @@ const RegistrarKiosko = () => {
                   </Select>
                   {errors.sucursalId && <p className="text-sm text-red-500">{errors.sucursalId}</p>}
                 </div>
-
-                {/* Estado */}
-                <div className="space-y-2">
-                  <Label className="text-admin-text-primary">Estado operativo</Label>
-                  <Select
-                    value={form.estado}
-                    onValueChange={(val) => {
-                      setForm((f) => ({ ...f, estado: val }));
-                      if (errors.estado) setErrors((er) => ({ ...er, estado: "" }));
-                    }}
-                  >
-                    <SelectTrigger className={`bg-admin-background border-admin-border-light ${errors.estado ? "border-red-500" : ""}`}>
-                      <SelectValue placeholder="Seleccione el estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {estados.map((e) => (
-                        <SelectItem key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.estado && <p className="text-sm text-red-500">{errors.estado}</p>}
-                </div>
-              </div>
 
               <div className="flex items-center gap-3">
                 <Button type="button" variant="outline" onClick={() => navigate('/kioskos')}>
