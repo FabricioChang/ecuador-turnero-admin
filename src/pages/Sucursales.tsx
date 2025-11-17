@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { useRegiones } from "@/hooks/useRegiones";
+import { useSucursales } from "@/hooks/useSucursales";
 
 const Sucursales = () => {
   const navigate = useNavigate();
@@ -20,8 +21,9 @@ const Sucursales = () => {
 
   // Cargar datos desde la base de datos
   const { regiones } = useRegiones();
-  const { data: provincias = [], isLoading: loadingProvincias } = useProvincias();
-  const { data: cantones = [], isLoading: loadingCantones } = useCantones();
+  const { data: provincias = [] } = useProvincias();
+  const { data: cantones = [] } = useCantones();
+  const { data: sucursalesDB = [], isLoading: loadingSucursales } = useSucursales();
 
   // Filtrar provincias por región seleccionada
   const provinciasFiltradas = useMemo(() => {
@@ -37,68 +39,18 @@ const Sucursales = () => {
     return cantones.filter(c => c.provincia_id === provinciaSeleccionada?.id);
   }, [provinciaFilter, cantones, provincias]);
 
-  const sucursales = [
-    {
-      id: 1,
-      identificador: "SUC-0001",
-      nombre: "Sucursal Centro",
-      direccion: "Av. 10 de Agosto 123, Quito",
-      estado: "Activa",
-      kioskos: 3,
-      usuariosEspera: 12,
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito"
-    },
-    {
-      id: 2,
-      identificador: "SUC-0002",
-      nombre: "Sucursal Norte",
-      direccion: "Av. Eloy Alfaro 456, Quito",
-      estado: "Activa",
-      kioskos: 2,
-      usuariosEspera: 8,
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito"
-    },
-    {
-      id: 3,
-      identificador: "SUC-0003",
-      nombre: "Sucursal Sur",
-      direccion: "Av. Maldonado 789, Quito",
-      estado: "Mantenimiento",
-      kioskos: 4,
-      usuariosEspera: 0,
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito"
-    },
-    {
-      id: 4,
-      identificador: "SUC-0004",
-      nombre: "Sucursal Guayaquil Centro",
-      direccion: "Av. 9 de Octubre 100, Guayaquil",
-      estado: "Activa",
-      kioskos: 5,
-      usuariosEspera: 15,
-      region: "costa",
-      provincia: "Guayas",
-      ciudad: "Guayaquil"
-    },
-    {
-      id: 5,
-      identificador: "SUC-0005",
-      nombre: "Sucursal Cuenca",
-      direccion: "Calle Bolívar 200, Cuenca",
-      estado: "Inactiva",
-      kioskos: 0,
-      usuariosEspera: 0,
-      region: "sierra",
-      provincia: "Azuay",
-      ciudad: "Cuenca"
-    }
-  ];
+  // Datos desde la base de datos
+  const sucursales = sucursalesDB.map((suc: any) => ({
+    id: suc.id,
+    identificador: suc.identificador,
+    nombre: suc.nombre,
+    direccion: suc.direccion || "Sin dirección",
+    estado: suc.estado,
+    provincia: suc.provincia?.nombre || "",
+    ciudad: suc.canton?.nombre || "",
+    telefono: suc.telefono,
+    email: suc.email
+  }));
 
   const handleRegionChange = (value: string) => {
     setRegionFilter(value);
@@ -115,19 +67,11 @@ const Sucursales = () => {
     const matchesSearch = sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sucursal.direccion.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesRegion = !regionFilter || sucursal.region === regionFilter;
     const matchesProvincia = !provinciaFilter || sucursal.provincia === provinciaFilter;
     const matchesCiudad = !ciudadFilter || sucursal.ciudad === ciudadFilter;
-    const matchesEstado = !estadoFilter || sucursal.estado === estadoFilter;
-    
-    let matchesKioskos = true;
-    if (kioskosFilter) {
-      if (kioskosFilter === "0") matchesKioskos = sucursal.kioskos === 0;
-      else if (kioskosFilter === "1-3") matchesKioskos = sucursal.kioskos >= 1 && sucursal.kioskos <= 3;
-      else if (kioskosFilter === "4+") matchesKioskos = sucursal.kioskos >= 4;
-    }
+    const matchesEstado = !estadoFilter || sucursal.estado.toLowerCase() === estadoFilter.toLowerCase();
 
-    return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesEstado && matchesKioskos;
+    return matchesSearch && matchesProvincia && matchesCiudad && matchesEstado;
   });
 
   const clearFilters = () => {
@@ -205,7 +149,6 @@ const Sucursales = () => {
               <Select 
                 value={provinciaFilter} 
                 onValueChange={handleProvinciaChange}
-                disabled={loadingProvincias}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar provincia" />
@@ -223,7 +166,7 @@ const Sucursales = () => {
               <Select 
                 value={ciudadFilter} 
                 onValueChange={setCiudadFilter}
-                disabled={!provinciaFilter || loadingCantones}
+                disabled={!provinciaFilter}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar ciudad" />
@@ -313,16 +256,16 @@ const Sucursales = () => {
                 <div className="flex items-center space-x-2">
                   <Monitor className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{sucursal.kioskos}</p>
-                    <p className="text-xs text-admin-text-muted">Kioskos</p>
+                    <p className="text-sm font-medium text-admin-text-primary">{sucursal.telefono || 'N/A'}</p>
+                    <p className="text-xs text-admin-text-muted">Teléfono</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{sucursal.usuariosEspera}</p>
-                    <p className="text-xs text-admin-text-muted">En espera</p>
+                    <p className="text-sm font-medium text-admin-text-primary">{sucursal.email || 'N/A'}</p>
+                    <p className="text-xs text-admin-text-muted">Email</p>
                   </div>
                 </div>
               </div>

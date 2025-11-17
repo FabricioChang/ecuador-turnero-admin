@@ -5,12 +5,25 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Tag, Clock, Users, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useCategorias } from "@/hooks/useCategorias";
 
 const Categorias = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [prioridadFilter, setPrioridadFilter] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("");
+
+  const { data: categoriasDB = [], isLoading } = useCategorias();
+
+  const categorias = categoriasDB.map((cat: any) => ({
+    id: cat.id,
+    nombre: cat.nombre,
+    descripcion: cat.descripcion || "Sin descripción",
+    tiempoEsperaEstimado: cat.tiempo_estimado,
+    estado: cat.estado,
+    color: cat.color,
+    sucursal: cat.sucursal?.nombre || "General"
+  }));
 
   const categorias = [
     {

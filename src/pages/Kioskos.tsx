@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { useRegiones } from "@/hooks/useRegiones";
+import { useKioskos } from "@/hooks/useKioskos";
 
 const Kioskos = () => {
   const navigate = useNavigate();
@@ -20,8 +21,20 @@ const Kioskos = () => {
 
   // Cargar datos desde la base de datos
   const { regiones } = useRegiones();
-  const { data: provincias = [], isLoading: loadingProvincias } = useProvincias();
-  const { data: cantones = [], isLoading: loadingCantones } = useCantones();
+  const { data: provincias = [] } = useProvincias();
+  const { data: cantones = [] } = useCantones();
+  const { data: kioskosDB = [], isLoading } = useKioskos();
+
+  const kioskos = kioskosDB.map((k: any) => ({
+    id: k.id,
+    identificador: k.identificador,
+    nombre: k.nombre,
+    sucursal: k.sucursal?.nombre || "Sin sucursal",
+    estado: k.estado,
+    ubicacion: k.ubicacion || "No especificada",
+    provincia: k.sucursal?.provincia?.nombre || "",
+    ciudad: k.sucursal?.canton?.nombre || ""
+  }));
 
   // Filtrar provincias por región seleccionada
   const provinciasFiltradas = useMemo(() => {
@@ -36,57 +49,6 @@ const Kioskos = () => {
     const provinciaSeleccionada = provincias.find(p => p.nombre === provinciaFilter);
     return cantones.filter(c => c.provincia_id === provinciaSeleccionada?.id);
   }, [provinciaFilter, cantones, provincias]);
-
-  const kioskos = [
-    {
-      id: "K-001",
-      nombre: "Kiosko Principal Centro",
-      sucursal: "Sucursal Centro",
-      estado: "Operativo",
-      conexion: "Excelente",
-      bateria: 95,
-      ultimaActividad: "Hace 2 min",
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito"
-    },
-    {
-      id: "K-002",
-      nombre: "Kiosko Secundario Centro",
-      sucursal: "Sucursal Centro",
-      estado: "Operativo",
-      conexion: "Buena",
-      bateria: 78,
-      ultimaActividad: "Hace 5 min",
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito"
-    },
-    {
-      id: "K-003",
-      nombre: "Kiosko Norte A",
-      sucursal: "Sucursal Norte",
-      estado: "Mantenimiento",
-      conexion: "Sin conexión",
-      bateria: 0,
-      ultimaActividad: "Hace 2 horas",
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito"
-    },
-    {
-      id: "K-004",
-      nombre: "Kiosko Sur Principal",
-      sucursal: "Sucursal Sur",
-      estado: "Operativo",
-      conexion: "Regular",
-      bateria: 45,
-      ultimaActividad: "Hace 1 min",
-      region: "costa",
-      provincia: "Guayas",
-      ciudad: "Guayaquil"
-    }
-  ];
 
   const handleRegionChange = (value: string) => {
     setRegionFilter(value);

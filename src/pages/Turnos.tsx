@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useTurnos } from "@/hooks/useTurnos";
 import { 
   Clock, 
   CheckCircle, 
@@ -117,8 +118,7 @@ const mockTurnos: Turno[] = [
   }
 ];
 
-const Turnos = () => {
-  const [turnos, setTurnos] = useState<Turno[]>(mockTurnos);
+  const { data: turnosDB = [], isLoading } = useTurnos();
   const [busqueda, setBusqueda] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
   const [provinciaFilter, setProvinciaFilter] = useState("");
@@ -128,9 +128,25 @@ const Turnos = () => {
   const [categoriaFilter, setCategoriaFilter] = useState("");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
-  const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
+  const [turnoSeleccionado, setTurnoSeleccionado] = useState<any | null>(null);
   const [modalDetalle, setModalDetalle] = useState(false);
   const { toast } = useToast();
+
+  const turnos = turnosDB.map((t: any) => ({
+    id: t.id,
+    numero: t.numero,
+    cliente: {
+      nombre: t.cliente_nombre || "Sin nombre",
+      documento: t.cliente_identificacion || "",
+    },
+    sucursal: t.sucursal?.nombre || "",
+    kiosko: t.kiosko?.nombre || "Sin kiosko",
+    categoria: t.categoria?.nombre || "",
+    estado: t.estado,
+    fechaCreacion: new Date(t.fecha_creacion).toLocaleDateString(),
+    horaCreacion: new Date(t.fecha_creacion).toLocaleTimeString(),
+    tiempoEspera: t.tiempo_espera || 0
+  }));
 
   // Calcular KPIs
   const kpis = {
