@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,15 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useCategorias } from "@/hooks/useCategorias";
+import { useUpdateCategoria, useDeleteCategoria } from "@/hooks/useCategoriasMutations";
 
 const CategoriaConfiguracion = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { data: categorias = [] } = useCategorias();
+  const updateCategoria = useUpdateCategoria();
+  const deleteCategoria = useDeleteCategoria();
 
   const [formData, setFormData] = useState({
     nombre: "Consultas Generales",
@@ -27,11 +32,29 @@ const CategoriaConfiguracion = () => {
     modoMantenimiento: false
   });
 
+  useEffect(() => {
+    const categoria = categorias.find((c: any) => c.id === id);
+    if (categoria) {
+      setFormData({
+        nombre: categoria.nombre,
+        descripcion: categoria.descripcion || "",
+        prioridad: "Media",
+        tiempoEsperaEstimado: categoria.tiempo_estimado.toString(),
+        tiempoReagendamiento: "30",
+        estado: categoria.estado,
+        limiteReagendamientos: "3",
+        notificacionesAutomaticas: true,
+        alertasAdministrativas: false,
+        modoMantenimiento: false
+      });
+    }
+  }, [categorias, id]);
+
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.nombre.trim()) {
@@ -52,28 +75,22 @@ const CategoriaConfiguracion = () => {
       return;
     }
 
-    if (!formData.tiempoReagendamiento || parseInt(formData.tiempoReagendamiento) <= 0) {
-      toast({
-        title: "Error",
-        description: "El tiempo de reagendamiento debe ser mayor a 0",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!id) return;
 
-    // Simular guardado
-    toast({
-      title: "Éxito",
-      description: "Configuración de la categoría actualizada exitosamente",
+    await updateCategoria.mutateAsync({
+      id,
+      nombre: formData.nombre,
+      descripcion: formData.descripcion || undefined,
+      tiempo_estimado: parseInt(formData.tiempoEsperaEstimado),
+      estado: formData.estado,
     });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    if (!id) return;
+    
     if (window.confirm("¿Está seguro de que desea eliminar esta categoría? Esta acción no se puede deshacer.")) {
-      toast({
-        title: "Categoría Eliminada",
-        description: "La categoría ha sido eliminada exitosamente",
-      });
+      await deleteCategoria.mutateAsync(id);
       navigate('/categorias');
     }
   };

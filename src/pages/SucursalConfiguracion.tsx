@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,18 +9,31 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useSucursales } from "@/hooks/useSucursales";
+import { useUpdateSucursal, useDeleteSucursal } from "@/hooks/useSucursalesMutations";
+import { useProvincias } from "@/hooks/useProvincias";
+import { useCantones } from "@/hooks/useCantones";
 
 const SucursalConfiguracion = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { data: sucursales = [] } = useSucursales();
+  const { data: provincias = [] } = useProvincias();
+  const { data: cantones = [] } = useCantones();
+  const updateSucursal = useUpdateSucursal();
+  const deleteSucursal = useDeleteSucursal();
 
   const [formData, setFormData] = useState({
     nombre: "Sucursal Centro",
-    descripcion: "Sucursal principal ubicada en el centro histórico de Quito, atiende principalmente trámites administrativos y consultas generales.",
-    direccion: "Av. 10 de Agosto 123, Quito, Pichincha",
+    descripcion: "",
+    direccion: "",
+    telefono: "",
+    email: "",
+    provincia_id: "",
+    canton_id: "",
     horarioApertura: "08:00",
     horarioCierre: "17:00",
-    estado: "Activa",
+    estado: "activo",
     capacidadMaxima: "50",
     tiempoPromedioAtencion: "15",
     notificacionesEmail: true,
@@ -28,11 +41,34 @@ const SucursalConfiguracion = () => {
     modoMantenimiento: false
   });
 
+  useEffect(() => {
+    const sucursal = sucursales.find((s: any) => s.id === id);
+    if (sucursal) {
+      setFormData({
+        nombre: sucursal.nombre,
+        descripcion: "",
+        direccion: sucursal.direccion || "",
+        telefono: sucursal.telefono || "",
+        email: sucursal.email || "",
+        provincia_id: sucursal.provincia_id,
+        canton_id: sucursal.canton_id,
+        horarioApertura: "08:00",
+        horarioCierre: "17:00",
+        estado: sucursal.estado,
+        capacidadMaxima: "50",
+        tiempoPromedioAtencion: "15",
+        notificacionesEmail: true,
+        notificacionesSMS: false,
+        modoMantenimiento: false
+      });
+    }
+  }, [sucursales, id]);
+
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.nombre.trim()) {
@@ -53,19 +89,25 @@ const SucursalConfiguracion = () => {
       return;
     }
 
-    // Simular guardado
-    toast({
-      title: "Éxito",
-      description: "Configuración de la sucursal actualizada exitosamente",
+    if (!id) return;
+
+    await updateSucursal.mutateAsync({
+      id,
+      nombre: formData.nombre,
+      direccion: formData.direccion,
+      telefono: formData.telefono || undefined,
+      email: formData.email || undefined,
+      provincia_id: formData.provincia_id,
+      canton_id: formData.canton_id,
+      estado: formData.estado,
     });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    if (!id) return;
+    
     if (window.confirm("¿Está seguro de que desea eliminar esta sucursal? Esta acción no se puede deshacer.")) {
-      toast({
-        title: "Sucursal Eliminada",
-        description: "La sucursal ha sido eliminada exitosamente",
-      });
+      await deleteSucursal.mutateAsync(id);
       navigate('/sucursales');
     }
   };
