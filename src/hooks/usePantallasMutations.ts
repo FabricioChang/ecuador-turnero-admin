@@ -15,7 +15,7 @@ export const useCreatePantalla = () => {
         .from("pantallas")
         .insert([{
           ...data,
-          identificador: '', // Se genera automáticamente si hay trigger
+          identificador: '', // El trigger lo generará automáticamente
         }])
         .select()
         .single();

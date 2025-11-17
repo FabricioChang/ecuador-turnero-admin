@@ -609,6 +609,7 @@ export type Database = {
     }
     Functions: {
       generate_kiosko_identifier: { Args: never; Returns: string }
+      generate_pantalla_identifier: { Args: never; Returns: string }
       generate_user_identifier: { Args: never; Returns: string }
       has_role: {
         Args: {
