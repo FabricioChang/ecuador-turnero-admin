@@ -118,6 +118,7 @@ const mockTurnos: Turno[] = [
   }
 ];
 
+const Turnos = () => {
   const { data: turnosDB = [], isLoading } = useTurnos();
   const [busqueda, setBusqueda] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
@@ -160,21 +161,6 @@ const mockTurnos: Turno[] = [
   const turnosFiltrados = turnos.filter(turno => {
     // Búsqueda por identificador
     if (busqueda && !turno.numero.toLowerCase().includes(busqueda.toLowerCase())) {
-      return false;
-    }
-    
-    // Filtro por región
-    if (regionFilter && turno.region !== regionFilter) {
-      return false;
-    }
-    
-    // Filtro por provincia
-    if (provinciaFilter && turno.provincia !== provinciaFilter) {
-      return false;
-    }
-    
-    // Filtro por ciudad
-    if (ciudadFilter && turno.ciudad !== ciudadFilter) {
       return false;
     }
     
@@ -224,15 +210,11 @@ const mockTurnos: Turno[] = [
     );
   };
 
-  const cambiarEstadoTurno = (turnoId: string, nuevoEstado: Turno['estado']) => {
-    setTurnos(prev => prev.map(turno => 
-      turno.id === turnoId 
-        ? { ...turno, estado: nuevoEstado }
-        : turno
-    ));
+  const cambiarEstadoTurno = (turnoId: string, nuevoEstado: string) => {
+    // TODO: Implementar actualización en BD
     toast({
       title: "Estado actualizado",
-      description: `El turno ha sido marcado como ${nuevoEstado}.`
+      description: `El turno ha sido marcado como ${nuevoEstado}`,
     });
   };
 

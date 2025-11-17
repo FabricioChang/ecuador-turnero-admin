@@ -25,75 +25,10 @@ const Categorias = () => {
     sucursal: cat.sucursal?.nombre || "General"
   }));
 
-  const categorias = [
-    {
-      id: 1,
-      nombre: "Consultas Generales",
-      prioridad: "Media",
-      tiempoEsperaEstimado: 15,
-      estado: "Activa",
-      turnosAtendidos: 45,
-      turnosEnEspera: 8,
-      turnosPerdidos: 2,
-      turnosReagendados: 5,
-      tiempoReagendamiento: 30
-    },
-    {
-      id: 2,
-      nombre: "Trámites Urgentes",
-      prioridad: "Alta",
-      tiempoEsperaEstimado: 5,
-      estado: "Activa",
-      turnosAtendidos: 23,
-      turnosEnEspera: 12,
-      turnosPerdidos: 1,
-      turnosReagendados: 3,
-      tiempoReagendamiento: 15
-    },
-    {
-      id: 3,
-      nombre: "Pagos y Facturación",
-      prioridad: "Media",
-      tiempoEsperaEstimado: 10,
-      estado: "Activa",
-      turnosAtendidos: 67,
-      turnosEnEspera: 5,
-      turnosPerdidos: 4,
-      turnosReagendados: 8,
-      tiempoReagendamiento: 20
-    },
-    {
-      id: 4,
-      nombre: "Soporte Técnico",
-      prioridad: "Baja",
-      tiempoEsperaEstimado: 25,
-      estado: "Mantenimiento",
-      turnosAtendidos: 12,
-      turnosEnEspera: 0,
-      turnosPerdidos: 6,
-      turnosReagendados: 15,
-      tiempoReagendamiento: 45
-    },
-    {
-      id: 5,
-      nombre: "Atención Especial",
-      prioridad: "Alta",
-      tiempoEsperaEstimado: 8,
-      estado: "Inactiva",
-      turnosAtendidos: 0,
-      turnosEnEspera: 0,
-      turnosPerdidos: 0,
-      turnosReagendados: 0,
-      tiempoReagendamiento: 10
-    }
-  ];
-
   const filteredCategorias = categorias.filter(categoria => {
     const matchesSearch = categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPrioridad = !prioridadFilter || categoria.prioridad === prioridadFilter;
-    const matchesEstado = !estadoFilter || categoria.estado === estadoFilter;
-
-    return matchesSearch && matchesPrioridad && matchesEstado;
+    const matchesEstado = !estadoFilter || categoria.estado.toLowerCase() === estadoFilter.toLowerCase();
+    return matchesSearch && matchesEstado;
   });
 
   const clearFilters = () => {
@@ -228,8 +163,8 @@ const Categorias = () => {
                   <Tag className="h-4 w-4 text-admin-text-muted" />
                   <span className="text-sm text-admin-text-secondary">Prioridad:</span>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${getPrioridadColor(categoria.prioridad)}`}>
-                  {categoria.prioridad}
+                <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                  {categoria.sucursal}
                 </span>
               </div>
 
@@ -243,18 +178,18 @@ const Categorias = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-admin-text-muted" />
+                  <Tag className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{categoria.turnosAtendidos}</p>
-                    <p className="text-xs text-admin-text-muted">Atendidos</p>
+                    <p className="text-sm font-medium text-admin-text-primary">{categoria.descripcion}</p>
+                    <p className="text-xs text-admin-text-muted">Descripción</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{categoria.turnosEnEspera}</p>
-                    <p className="text-xs text-admin-text-muted">En espera</p>
+                    <p className="text-sm font-medium text-admin-text-primary">-</p>
+                    <p className="text-xs text-admin-text-muted">Turnos</p>
                   </div>
                 </div>
               </div>
