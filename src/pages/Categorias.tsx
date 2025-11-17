@@ -142,11 +142,11 @@ const Categorias = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCategorias.map((categoria) => (
-          <Card key={categoria.id} className="bg-admin-surface border-admin-border-light">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="text-admin-text-primary">{categoria.nombre}</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${
+          <Card key={categoria.id} className="bg-admin-surface border-admin-border-light h-auto overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between gap-2">
+                <span className="text-admin-text-primary truncate">{categoria.nombre}</span>
+                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
                   categoria.estado === 'Activa' 
                     ? 'bg-green-100 text-green-800' 
                     : categoria.estado === 'Mantenimiento'
@@ -157,38 +157,38 @@ const Categorias = () => {
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Tag className="h-4 w-4 text-admin-text-muted" />
-                  <span className="text-sm text-admin-text-secondary">Prioridad:</span>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Tag className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                  <span className="text-sm text-admin-text-secondary truncate">Prioridad:</span>
                 </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium whitespace-nowrap flex-shrink-0">
                   Media
                 </span>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-admin-text-muted" />
-                <div className="flex-1">
+              <div className="flex items-center space-x-2 min-w-0">
+                <Clock className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-admin-text-primary">{categoria.tiempoEsperaEstimado} min</p>
                   <p className="text-xs text-admin-text-muted">Tiempo estimado</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2">
-                  <Tag className="h-4 w-4 text-admin-text-muted" />
-                  <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{categoria.sucursal}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Tag className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-admin-text-primary truncate">{categoria.sucursal}</p>
                     <p className="text-xs text-admin-text-muted">Sucursal</p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-admin-text-muted" />
-                  <div>
-                    <p className="text-sm font-medium text-admin-text-primary truncate">{categoria.descripcion}</p>
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Users className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-admin-text-primary truncate" title={categoria.descripcion}>{categoria.descripcion}</p>
                     <p className="text-xs text-admin-text-muted">Descripción</p>
                   </div>
                 </div>
