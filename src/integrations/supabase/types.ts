@@ -50,6 +50,7 @@ export type Database = {
           descripcion: string | null
           estado: string
           id: string
+          identificador: string | null
           nombre: string
           sucursal_id: string | null
           tiempo_estimado: number
@@ -61,6 +62,7 @@ export type Database = {
           descripcion?: string | null
           estado?: string
           id?: string
+          identificador?: string | null
           nombre: string
           sucursal_id?: string | null
           tiempo_estimado?: number
@@ -72,6 +74,7 @@ export type Database = {
           descripcion?: string | null
           estado?: string
           id?: string
+          identificador?: string | null
           nombre?: string
           sucursal_id?: string | null
           tiempo_estimado?: number
@@ -129,6 +132,7 @@ export type Database = {
           descripcion: string | null
           es_sistema: boolean
           id: string
+          identificador: string | null
           nombre: string
           updated_at: string
         }
@@ -137,6 +141,7 @@ export type Database = {
           descripcion?: string | null
           es_sistema?: boolean
           id?: string
+          identificador?: string | null
           nombre: string
           updated_at?: string
         }
@@ -145,6 +150,7 @@ export type Database = {
           descripcion?: string | null
           es_sistema?: boolean
           id?: string
+          identificador?: string | null
           nombre?: string
           updated_at?: string
         }
@@ -380,6 +386,7 @@ export type Database = {
           estado: string
           fecha_creacion: string
           id: string
+          identificador: string | null
           nombre: string
           tipo: Database["public"]["Enums"]["tipo_publicidad"]
           updated_at: string
@@ -391,6 +398,7 @@ export type Database = {
           estado?: string
           fecha_creacion?: string
           id?: string
+          identificador?: string | null
           nombre: string
           tipo: Database["public"]["Enums"]["tipo_publicidad"]
           updated_at?: string
@@ -402,6 +410,7 @@ export type Database = {
           estado?: string
           fecha_creacion?: string
           id?: string
+          identificador?: string | null
           nombre?: string
           tipo?: Database["public"]["Enums"]["tipo_publicidad"]
           updated_at?: string
@@ -672,8 +681,11 @@ export type Database = {
         }
         Returns: string
       }
+      generate_categoria_identifier: { Args: never; Returns: string }
+      generate_custom_role_identifier: { Args: never; Returns: string }
       generate_kiosko_identifier: { Args: never; Returns: string }
       generate_pantalla_identifier: { Args: never; Returns: string }
+      generate_publicidad_identifier: { Args: never; Returns: string }
       generate_sucursal_identifier: { Args: never; Returns: string }
       generate_user_identifier: { Args: never; Returns: string }
       has_role: {
