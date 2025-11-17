@@ -9,9 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Plus, Tag, Clock, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useCreateCategoria } from "@/hooks/useCategoriasMutations";
 
 const NuevaCategoria = () => {
   const navigate = useNavigate();
+  const createCategoria = useCreateCategoria();
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -27,22 +29,13 @@ const NuevaCategoria = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.nombre.trim()) {
       toast({
         title: "Error",
         description: "El nombre de la categoría es requerido",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!formData.prioridad) {
-      toast({
-        title: "Error",
-        description: "La prioridad es requerida",
         variant: "destructive"
       });
       return;
@@ -57,22 +50,12 @@ const NuevaCategoria = () => {
       return;
     }
 
-    if (!formData.tiempoReagendamiento || parseInt(formData.tiempoReagendamiento) <= 0) {
-      toast({
-        title: "Error",
-        description: "El tiempo de reagendamiento debe ser mayor a 0",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Simular guardado
-    toast({
-      title: "Éxito",
-      description: `Categoría "${formData.nombre}" creada exitosamente`,
+    await createCategoria.mutateAsync({
+      nombre: formData.nombre,
+      descripcion: formData.descripcion || undefined,
+      tiempo_estimado: parseInt(formData.tiempoEsperaEstimado),
     });
 
-    // Regresar a la lista
     navigate('/categorias');
   };
 

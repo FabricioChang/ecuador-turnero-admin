@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
+import { useCreateKiosko } from "@/hooks/useKioskosMutations";
 
 
 const RegistrarKiosko = () => {
@@ -14,8 +15,10 @@ const RegistrarKiosko = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const initialSucursalId = (location.state as { sucursalId?: string })?.sucursalId || searchParams.get('sucursalId') || "";
   const initialSucursalNombre = (location.state as { sucursalNombre?: string })?.sucursalNombre || searchParams.get('sucursalNombre') || "";
   const [sucursalAsignadaNombre] = useState(initialSucursalNombre || "Sin asignar");
+  const createKiosko = useCreateKiosko();
 
   useEffect(() => {
     document.title = "Registrar Kiosko | Panel Admin";
@@ -43,15 +46,26 @@ const RegistrarKiosko = () => {
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = (ev: React.FormEvent) => {
+  const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) {
       toast({ title: "Errores en el formulario", description: "Revise los campos marcados", variant: "destructive" });
       return;
     }
 
-    toast({ title: "Kiosko registrado", description: `${form.nombre} creado correctamente` });
-    setForm({ nombre: "", sucursalId: "", ubicacion: "", estado: "" });
+    if (!initialSucursalId) {
+      toast({ title: "Error", description: "No se ha asignado una sucursal", variant: "destructive" });
+      return;
+    }
+
+    await createKiosko.mutateAsync({
+      nombre: form.nombre,
+      sucursal_id: initialSucursalId,
+      ubicacion: form.ubicacion,
+      estado: form.estado as 'activo' | 'inactivo' | 'mantenimiento',
+    });
+    
+    navigate('/kioskos');
   };
 
   return (
