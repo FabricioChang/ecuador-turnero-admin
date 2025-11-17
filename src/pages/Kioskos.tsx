@@ -1,10 +1,33 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Monitor, Wifi, Battery } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Monitor, Wifi, Battery, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Kioskos = () => {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [provinciaFilter, setProvinciaFilter] = useState("");
+  const [ciudadFilter, setCiudadFilter] = useState("");
+  const [sucursalFilter, setSucursalFilter] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("");
+
+  const regiones = {
+    costa: ["Esmeraldas", "Manabí", "Los Ríos", "Guayas", "Santa Elena", "El Oro"],
+    sierra: ["Carchi", "Imbabura", "Pichincha", "Cotopaxi", "Tungurahua", "Bolívar", "Chimborazo", "Cañar", "Azuay", "Loja"],
+    amazonia: ["Sucumbíos", "Napo", "Orellana", "Pastaza", "Morona Santiago", "Zamora Chinchipe"],
+    galapagos: ["Galápagos"]
+  };
+
+  const ciudades = {
+    "Pichincha": ["Quito", "Cayambe", "Mejía", "Pedro Moncayo", "Rumiñahui"],
+    "Guayas": ["Guayaquil", "Durán", "Samborondón", "Daule", "Milagro"],
+    "Azuay": ["Cuenca", "Gualaceo", "Paute", "Chordeleg", "Sigsig"]
+  };
+
   const kioskos = [
     {
       id: "K-001",
@@ -13,7 +36,10 @@ const Kioskos = () => {
       estado: "Operativo",
       conexion: "Excelente",
       bateria: 95,
-      ultimaActividad: "Hace 2 min"
+      ultimaActividad: "Hace 2 min",
+      region: "sierra",
+      provincia: "Pichincha",
+      ciudad: "Quito"
     },
     {
       id: "K-002",
@@ -22,7 +48,10 @@ const Kioskos = () => {
       estado: "Operativo",
       conexion: "Buena",
       bateria: 78,
-      ultimaActividad: "Hace 5 min"
+      ultimaActividad: "Hace 5 min",
+      region: "sierra",
+      provincia: "Pichincha",
+      ciudad: "Quito"
     },
     {
       id: "K-003",
@@ -31,7 +60,10 @@ const Kioskos = () => {
       estado: "Mantenimiento",
       conexion: "Sin conexión",
       bateria: 0,
-      ultimaActividad: "Hace 2 horas"
+      ultimaActividad: "Hace 2 horas",
+      region: "sierra",
+      provincia: "Pichincha",
+      ciudad: "Quito"
     },
     {
       id: "K-004",
@@ -40,9 +72,35 @@ const Kioskos = () => {
       estado: "Operativo",
       conexion: "Regular",
       bateria: 45,
-      ultimaActividad: "Hace 1 min"
+      ultimaActividad: "Hace 1 min",
+      region: "costa",
+      provincia: "Guayas",
+      ciudad: "Guayaquil"
     }
   ];
+
+  const handleRegionChange = (value: string) => {
+    setRegionFilter(value);
+    setProvinciaFilter("");
+    setCiudadFilter("");
+  };
+
+  const handleProvinciaChange = (value: string) => {
+    setProvinciaFilter(value);
+    setCiudadFilter("");
+  };
+
+  const filteredKioskos = kioskos.filter(kiosko => {
+    const matchesSearch = kiosko.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         kiosko.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRegion = !regionFilter || kiosko.region === regionFilter;
+    const matchesProvincia = !provinciaFilter || kiosko.provincia === provinciaFilter;
+    const matchesCiudad = !ciudadFilter || kiosko.ciudad === ciudadFilter;
+    const matchesSucursal = !sucursalFilter || kiosko.sucursal === sucursalFilter;
+    const matchesEstado = !estadoFilter || kiosko.estado === estadoFilter;
+    
+    return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesSucursal && matchesEstado;
+  });
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -81,8 +139,99 @@ const Kioskos = () => {
         </Button>
       </div>
 
+      {/* Filtros */}
+      <Card className="bg-admin-surface border-admin-border-light">
+        <CardHeader>
+          <CardTitle className="flex items-center text-admin-text-primary">
+            <Filter className="h-5 w-5 mr-2" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-admin-text-muted h-4 w-4" />
+            <Input
+              placeholder="Buscar por identificador o nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-admin-bg border-admin-border-light text-admin-text-primary"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Select value={regionFilter} onValueChange={handleRegionChange}>
+              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                <SelectValue placeholder="Región" />
+              </SelectTrigger>
+              <SelectContent className="bg-admin-surface border-admin-border-light">
+                <SelectItem value="all">Todas las regiones</SelectItem>
+                <SelectItem value="costa">Costa</SelectItem>
+                <SelectItem value="sierra">Sierra</SelectItem>
+                <SelectItem value="amazonia">Amazonía</SelectItem>
+                <SelectItem value="galapagos">Galápagos</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select 
+              value={provinciaFilter} 
+              onValueChange={handleProvinciaChange}
+              disabled={!regionFilter || regionFilter === "all"}
+            >
+              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                <SelectValue placeholder="Provincia" />
+              </SelectTrigger>
+              <SelectContent className="bg-admin-surface border-admin-border-light">
+                <SelectItem value="all">Todas las provincias</SelectItem>
+                {regionFilter && regionFilter !== "all" && regiones[regionFilter as keyof typeof regiones].map(prov => (
+                  <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select 
+              value={ciudadFilter} 
+              onValueChange={setCiudadFilter}
+              disabled={!provinciaFilter || provinciaFilter === "all"}
+            >
+              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                <SelectValue placeholder="Ciudad" />
+              </SelectTrigger>
+              <SelectContent className="bg-admin-surface border-admin-border-light">
+                <SelectItem value="all">Todas las ciudades</SelectItem>
+                {provinciaFilter && provinciaFilter !== "all" && ciudades[provinciaFilter as keyof typeof ciudades]?.map(ciudad => (
+                  <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                <SelectValue placeholder="Sucursal" />
+              </SelectTrigger>
+              <SelectContent className="bg-admin-surface border-admin-border-light">
+                <SelectItem value="all">Todas las sucursales</SelectItem>
+                <SelectItem value="Sucursal Centro">Sucursal Centro</SelectItem>
+                <SelectItem value="Sucursal Norte">Sucursal Norte</SelectItem>
+                <SelectItem value="Sucursal Sur">Sucursal Sur</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent className="bg-admin-surface border-admin-border-light">
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="Operativo">Operativo</SelectItem>
+                <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {kioskos.map((kiosko) => (
+        {filteredKioskos.map((kiosko) => (
           <Card key={kiosko.id} className="bg-admin-surface border-admin-border-light">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">

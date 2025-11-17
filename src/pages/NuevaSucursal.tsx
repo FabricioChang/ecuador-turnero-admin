@@ -17,6 +17,10 @@ interface Kiosko {
   estado: string;
   ubicacion: string;
   tipo: string;
+  region: string;
+  provincia: string;
+  ciudad: string;
+  sucursal: string;
 }
 
 const NuevaSucursal = () => {
@@ -36,9 +40,25 @@ const NuevaSucursal = () => {
   });
 
   const [searchKioskos, setSearchKioskos] = useState("");
-  const [categoriaFilter, setCategoriaFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [provinciaFilter, setProvinciaFilter] = useState("");
+  const [ciudadFilter, setCiudadFilter] = useState("");
+  const [sucursalFilter, setSucursalFilter] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("");
   const [selectedKioskos, setSelectedKioskos] = useState<number[]>([]);
+
+  const regiones = {
+    costa: ["Esmeraldas", "Manabí", "Los Ríos", "Guayas", "Santa Elena", "El Oro"],
+    sierra: ["Carchi", "Imbabura", "Pichincha", "Cotopaxi", "Tungurahua", "Bolívar", "Chimborazo", "Cañar", "Azuay", "Loja"],
+    amazonia: ["Sucumbíos", "Napo", "Orellana", "Pastaza", "Morona Santiago", "Zamora Chinchipe"],
+    galapagos: ["Galápagos"]
+  };
+
+  const ciudades = {
+    "Pichincha": ["Quito", "Cayambe", "Mejía", "Pedro Moncayo", "Rumiñahui"],
+    "Guayas": ["Guayaquil", "Durán", "Samborondón", "Daule", "Milagro"],
+    "Azuay": ["Cuenca", "Gualaceo", "Paute", "Chordeleg", "Sigsig"]
+  };
 
   const kioskosDisponibles: Kiosko[] = [
     {
@@ -47,7 +67,11 @@ const NuevaSucursal = () => {
       categoria: "Autoservicio",
       estado: "Disponible",
       ubicacion: "Sin asignar",
-      tipo: "Táctil"
+      tipo: "Táctil",
+      region: "sierra",
+      provincia: "Pichincha",
+      ciudad: "Quito",
+      sucursal: "Sin asignar"
     },
     {
       id: 2,
@@ -55,7 +79,11 @@ const NuevaSucursal = () => {
       categoria: "Información",
       estado: "Disponible",
       ubicacion: "Sin asignar",
-      tipo: "Táctil"
+      tipo: "Táctil",
+      region: "sierra",
+      provincia: "Pichincha",
+      ciudad: "Quito",
+      sucursal: "Sin asignar"
     },
     {
       id: 3,
@@ -63,7 +91,11 @@ const NuevaSucursal = () => {
       categoria: "Autoservicio",
       estado: "Disponible",
       ubicacion: "Sin asignar",
-      tipo: "Terminal"
+      tipo: "Terminal",
+      region: "costa",
+      provincia: "Guayas",
+      ciudad: "Guayaquil",
+      sucursal: "Sin asignar"
     },
     {
       id: 4,
@@ -71,7 +103,11 @@ const NuevaSucursal = () => {
       categoria: "Pagos",
       estado: "Disponible",
       ubicacion: "Sin asignar",
-      tipo: "Táctil"
+      tipo: "Táctil",
+      region: "sierra",
+      provincia: "Azuay",
+      ciudad: "Cuenca",
+      sucursal: "Sin asignar"
     },
     {
       id: 5,
@@ -79,7 +115,11 @@ const NuevaSucursal = () => {
       categoria: "Información",
       estado: "Mantenimiento",
       ubicacion: "Sin asignar",
-      tipo: "Terminal"
+      tipo: "Terminal",
+      region: "costa",
+      provincia: "Guayas",
+      ciudad: "Guayaquil",
+      sucursal: "Sin asignar"
     },
     {
       id: 6,
@@ -87,16 +127,35 @@ const NuevaSucursal = () => {
       categoria: "Autoservicio",
       estado: "Disponible",
       ubicacion: "Sin asignar",
-      tipo: "Táctil"
+      tipo: "Táctil",
+      region: "sierra",
+      provincia: "Pichincha",
+      ciudad: "Quito",
+      sucursal: "Sin asignar"
     }
   ];
 
+  const handleRegionChange = (value: string) => {
+    setRegionFilter(value);
+    setProvinciaFilter("");
+    setCiudadFilter("");
+  };
+
+  const handleProvinciaChange = (value: string) => {
+    setProvinciaFilter(value);
+    setCiudadFilter("");
+  };
+
   const filteredKioskos = kioskosDisponibles.filter(kiosko => {
-    const matchesSearch = kiosko.nombre.toLowerCase().includes(searchKioskos.toLowerCase());
-    const matchesCategoria = !categoriaFilter || kiosko.categoria === categoriaFilter;
-    const matchesEstado = !estadoFilter || kiosko.estado === estadoFilter;
+    const matchesSearch = kiosko.nombre.toLowerCase().includes(searchKioskos.toLowerCase()) ||
+                         kiosko.id.toString().includes(searchKioskos);
+    const matchesRegion = !regionFilter || regionFilter === "all" || kiosko.region === regionFilter;
+    const matchesProvincia = !provinciaFilter || provinciaFilter === "all" || kiosko.provincia === provinciaFilter;
+    const matchesCiudad = !ciudadFilter || ciudadFilter === "all" || kiosko.ciudad === ciudadFilter;
+    const matchesSucursal = !sucursalFilter || sucursalFilter === "all" || kiosko.sucursal === sucursalFilter;
+    const matchesEstado = !estadoFilter || estadoFilter === "all" || kiosko.estado === estadoFilter;
     
-    return matchesSearch && matchesCategoria && matchesEstado;
+    return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesSucursal && matchesEstado;
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -153,7 +212,10 @@ const NuevaSucursal = () => {
 
   const clearKioskoFilters = () => {
     setSearchKioskos("");
-    setCategoriaFilter("");
+    setRegionFilter("");
+    setProvinciaFilter("");
+    setCiudadFilter("");
+    setSucursalFilter("");
     setEstadoFilter("");
   };
 
@@ -280,24 +342,79 @@ const NuevaSucursal = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-admin-text-muted" />
                 <Input
-                  placeholder="Buscar kioskos..."
+                  placeholder="Buscar por identificador o nombre..."
                   value={searchKioskos}
                   onChange={(e) => setSearchKioskos(e.target.value)}
                   className="pl-10"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div className="space-y-2">
-                  <Label>Categoría</Label>
-                  <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+                  <Label>Región</Label>
+                  <Select value={regionFilter} onValueChange={handleRegionChange}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Todas las categorías" />
+                      <SelectValue placeholder="Región" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Autoservicio">Autoservicio</SelectItem>
-                      <SelectItem value="Información">Información</SelectItem>
-                      <SelectItem value="Pagos">Pagos</SelectItem>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="costa">Costa</SelectItem>
+                      <SelectItem value="sierra">Sierra</SelectItem>
+                      <SelectItem value="amazonia">Amazonía</SelectItem>
+                      <SelectItem value="galapagos">Galápagos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Provincia</Label>
+                  <Select 
+                    value={provinciaFilter} 
+                    onValueChange={handleProvinciaChange}
+                    disabled={!regionFilter || regionFilter === "all"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Provincia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {regionFilter && regionFilter !== "all" && regiones[regionFilter as keyof typeof regiones].map(prov => (
+                        <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Ciudad</Label>
+                  <Select 
+                    value={ciudadFilter} 
+                    onValueChange={setCiudadFilter}
+                    disabled={!provinciaFilter || provinciaFilter === "all"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ciudad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {provinciaFilter && provinciaFilter !== "all" && ciudades[provinciaFilter as keyof typeof ciudades]?.map(ciudad => (
+                        <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Sucursal</Label>
+                  <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sucursal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="Sin asignar">Sin asignar</SelectItem>
+                      <SelectItem value="Sucursal Centro">Sucursal Centro</SelectItem>
+                      <SelectItem value="Sucursal Norte">Sucursal Norte</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -306,21 +423,20 @@ const NuevaSucursal = () => {
                   <Label>Estado</Label>
                   <Select value={estadoFilter} onValueChange={setEstadoFilter}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Todos los estados" />
+                      <SelectValue placeholder="Estado" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="Disponible">Disponible</SelectItem>
                       <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="flex items-end">
-                  <Button type="button" variant="outline" onClick={clearKioskoFilters} className="w-full">
-                    Limpiar Filtros
-                  </Button>
-                </div>
               </div>
+
+              <Button type="button" variant="outline" onClick={clearKioskoFilters} className="w-full">
+                Limpiar Filtros
+              </Button>
             </div>
 
             {/* Lista de Kioskos */}

@@ -3,14 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Search, Filter } from "lucide-react";
 
 interface SucursalOption {
   id: number;
   nombre: string;
+  region: string;
+  provincia: string;
+  ciudad: string;
 }
 
 interface PublicidadItem {
@@ -21,6 +25,24 @@ interface PublicidadItem {
 const RegistrarPantalla = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const [searchSucursal, setSearchSucursal] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [provinciaFilter, setProvinciaFilter] = useState("");
+  const [ciudadFilter, setCiudadFilter] = useState("");
+
+  const regiones = {
+    costa: ["Esmeraldas", "Manabí", "Los Ríos", "Guayas", "Santa Elena", "El Oro"],
+    sierra: ["Carchi", "Imbabura", "Pichincha", "Cotopaxi", "Tungurahua", "Bolívar", "Chimborazo", "Cañar", "Azuay", "Loja"],
+    amazonia: ["Sucumbíos", "Napo", "Orellana", "Pastaza", "Morona Santiago", "Zamora Chinchipe"],
+    galapagos: ["Galápagos"]
+  };
+
+  const ciudades = {
+    "Pichincha": ["Quito", "Cayambe", "Mejía", "Pedro Moncayo", "Rumiñahui"],
+    "Guayas": ["Guayaquil", "Durán", "Samborondón", "Daule", "Milagro"],
+    "Azuay": ["Cuenca", "Gualaceo", "Paute", "Chordeleg", "Sigsig"]
+  };
 
   useEffect(() => {
     document.title = "Agregar Pantalla | Panel Admin";
@@ -33,14 +55,35 @@ const RegistrarPantalla = () => {
 
   const sucursales: SucursalOption[] = useMemo(
     () => [
-      { id: 1, nombre: "Sucursal Centro" },
-      { id: 2, nombre: "Sucursal Norte" },
-      { id: 3, nombre: "Sucursal Sur" },
-      { id: 4, nombre: "Sucursal Guayaquil Centro" },
-      { id: 5, nombre: "Sucursal Cuenca" },
+      { id: 1, nombre: "Sucursal Centro", region: "sierra", provincia: "Pichincha", ciudad: "Quito" },
+      { id: 2, nombre: "Sucursal Norte", region: "sierra", provincia: "Pichincha", ciudad: "Quito" },
+      { id: 3, nombre: "Sucursal Sur", region: "costa", provincia: "Guayas", ciudad: "Guayaquil" },
+      { id: 4, nombre: "Sucursal Guayaquil Centro", region: "costa", provincia: "Guayas", ciudad: "Guayaquil" },
+      { id: 5, nombre: "Sucursal Cuenca", region: "sierra", provincia: "Azuay", ciudad: "Cuenca" },
     ],
     []
   );
+
+  const handleRegionChange = (value: string) => {
+    setRegionFilter(value);
+    setProvinciaFilter("");
+    setCiudadFilter("");
+  };
+
+  const handleProvinciaChange = (value: string) => {
+    setProvinciaFilter(value);
+    setCiudadFilter("");
+  };
+
+  const filteredSucursales = sucursales.filter(sucursal => {
+    const matchesSearch = sucursal.nombre.toLowerCase().includes(searchSucursal.toLowerCase()) ||
+                         sucursal.id.toString().includes(searchSucursal);
+    const matchesRegion = !regionFilter || regionFilter === "all" || sucursal.region === regionFilter;
+    const matchesProvincia = !provinciaFilter || provinciaFilter === "all" || sucursal.provincia === provinciaFilter;
+    const matchesCiudad = !ciudadFilter || ciudadFilter === "all" || sucursal.ciudad === ciudadFilter;
+    
+    return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad;
+  });
 
   const publicidadCatalogo: PublicidadItem[] = useMemo(
     () => [
@@ -75,7 +118,7 @@ const RegistrarPantalla = () => {
     ev.preventDefault();
     if (!validar()) return;
 
-    const suc = sucursales.find((s) => String(s.id) === sucursalId)!;
+    const suc = filteredSucursales.find((s) => String(s.id) === sucursalId)!;
     const payload = {
       id: Date.now(),
       identificador,
@@ -83,6 +126,9 @@ const RegistrarPantalla = () => {
       sucursalId: suc.id,
       sucursalNombre: suc.nombre,
       publicidadIds: [...seleccionPublicidad],
+      region: suc.region,
+      provincia: suc.provincia,
+      ciudad: suc.ciudad,
     };
 
     toast({ title: "Pantalla creada", description: `Se creó "${nombre}" correctamente.` });
@@ -113,12 +159,90 @@ const RegistrarPantalla = () => {
 
         <div className="space-y-2">
           <Label>Sucursal a la que va dirigida</Label>
+          
+          {/* Filtros de Sucursal */}
+          <Card className="bg-admin-surface border-admin-border-light mb-4">
+            <CardHeader>
+              <CardTitle className="flex items-center text-admin-text-primary text-sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filtrar Sucursales
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-admin-text-muted" />
+                <Input
+                  placeholder="Buscar por identificador o nombre..."
+                  value={searchSucursal}
+                  onChange={(e) => setSearchSucursal(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Región</Label>
+                  <Select value={regionFilter} onValueChange={handleRegionChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Región" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="costa">Costa</SelectItem>
+                      <SelectItem value="sierra">Sierra</SelectItem>
+                      <SelectItem value="amazonia">Amazonía</SelectItem>
+                      <SelectItem value="galapagos">Galápagos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Provincia</Label>
+                  <Select 
+                    value={provinciaFilter} 
+                    onValueChange={handleProvinciaChange}
+                    disabled={!regionFilter || regionFilter === "all"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Provincia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {regionFilter && regionFilter !== "all" && regiones[regionFilter as keyof typeof regiones].map(prov => (
+                        <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Ciudad</Label>
+                  <Select 
+                    value={ciudadFilter} 
+                    onValueChange={setCiudadFilter}
+                    disabled={!provinciaFilter || provinciaFilter === "all"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ciudad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {provinciaFilter && provinciaFilter !== "all" && ciudades[provinciaFilter as keyof typeof ciudades]?.map(ciudad => (
+                        <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Select value={sucursalId} onValueChange={setSucursalId}>
             <SelectTrigger>
               <SelectValue placeholder="Seleccione una sucursal" />
             </SelectTrigger>
             <SelectContent>
-              {sucursales.map((s) => (
+              {filteredSucursales.map((s) => (
                 <SelectItem key={s.id} value={String(s.id)}>
                   {s.nombre}
                 </SelectItem>
