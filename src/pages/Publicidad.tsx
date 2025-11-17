@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,8 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Upload, Play, Image, Calendar, CheckCircle, XCircle, Monitor } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Upload, Play, Image, Calendar, CheckCircle, XCircle, Monitor, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useProvincias } from "@/hooks/useProvincias";
+import { useCantones } from "@/hooks/useCantones";
+import { useRegiones } from "@/hooks/useRegiones";
+import { useSucursales } from "@/hooks/useSucursales";
+import { usePantallas } from "@/hooks/usePantallas";
 
 interface PublicidadItem {
   id: number;
@@ -19,13 +25,6 @@ interface PublicidadItem {
   estado: 'activo' | 'inactivo';
 }
 
-interface Pantalla {
-  id: number;
-  nombre: string;
-  ubicacion: string;
-  estado: 'activa' | 'inactiva';
-}
-
 const Publicidad = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -35,8 +34,22 @@ const Publicidad = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedItem, setSelectedItem] = useState<PublicidadItem | null>(null);
-  const [selectedPantallas, setSelectedPantallas] = useState<number[]>([]);
+  const [selectedPantallas, setSelectedPantallas] = useState<string[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  
+  // Filtros para el modal
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
+  const [modalRegionFilter, setModalRegionFilter] = useState("");
+  const [modalProvinciaFilter, setModalProvinciaFilter] = useState("");
+  const [modalCiudadFilter, setModalCiudadFilter] = useState("");
+  const [modalSucursalFilter, setModalSucursalFilter] = useState("");
+  
+  // Hooks para cargar datos de la BD
+  const { regiones } = useRegiones();
+  const { data: provincias = [] } = useProvincias();
+  const { data: cantones = [] } = useCantones();
+  const { data: sucursalesDB = [] } = useSucursales();
+  const { data: pantallasDB = [], isLoading: loadingPantallas } = usePantallas();
 
   const publicidadItems: PublicidadItem[] = [
     {
@@ -66,13 +79,6 @@ const Publicidad = () => {
       fecha: "2024-01-08",
       estado: "inactivo"
     }
-  ];
-
-  const pantallas: Pantalla[] = [
-    { id: 1, nombre: "Pantalla Principal Centro", ubicacion: "Sucursal Centro", estado: "activa" },
-    { id: 2, nombre: "Pantalla Secundaria Centro", ubicacion: "Sucursal Centro", estado: "activa" },
-    { id: 3, nombre: "Pantalla Norte A", ubicacion: "Sucursal Norte", estado: "activa" },
-    { id: 4, nombre: "Pantalla Sur Principal", ubicacion: "Sucursal Sur", estado: "inactiva" }
   ];
 
   const validateForm = () => {
@@ -132,6 +138,12 @@ const Publicidad = () => {
     setSelectedItem(item);
     setSelectedPantallas([]);
     setIsAssignModalOpen(true);
+    // Reset filtros
+    setModalSearchTerm("");
+    setModalRegionFilter("");
+    setModalProvinciaFilter("");
+    setModalCiudadFilter("");
+    setModalSucursalFilter("");
   };
 
   const confirmAssignment = () => {
@@ -154,13 +166,58 @@ const Publicidad = () => {
     setSelectedPantallas([]);
   };
 
-  const togglePantallaSelection = (pantallaId: number) => {
+  const togglePantallaSelection = (pantallaId: string) => {
     setSelectedPantallas(prev => 
       prev.includes(pantallaId) 
         ? prev.filter(id => id !== pantallaId)
         : [...prev, pantallaId]
     );
   };
+
+  const handleModalRegionChange = (value: string) => {
+    setModalRegionFilter(value);
+    setModalProvinciaFilter("");
+    setModalCiudadFilter("");
+  };
+
+  const handleModalProvinciaChange = (value: string) => {
+    setModalProvinciaFilter(value);
+    setModalCiudadFilter("");
+  };
+
+  const provinciasFiltradas = useMemo(() => {
+    if (!modalRegionFilter) return provincias;
+    const regionSeleccionada = regiones.find((r: any) => r.id === modalRegionFilter);
+    return provincias.filter((p: any) => regionSeleccionada?.provincias.includes(p.nombre));
+  }, [modalRegionFilter, provincias, regiones]);
+
+  const cantonesFiltrados = useMemo(() => {
+    if (!modalProvinciaFilter) return cantones;
+    const provinciaSeleccionada = provincias.find((p: any) => p.nombre === modalProvinciaFilter);
+    return cantones.filter((c: any) => c.provincia_id === provinciaSeleccionada?.id);
+  }, [modalProvinciaFilter, cantones, provincias]);
+
+  const filteredPantallas = useMemo(() => {
+    return pantallasDB.filter((pantalla: any) => {
+      const matchesSearch = 
+        pantalla.identificador?.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
+        pantalla.nombre?.toLowerCase().includes(modalSearchTerm.toLowerCase());
+      
+      const matchesRegion = !modalRegionFilter || modalRegionFilter === "all" || 
+        regiones.find((r: any) => r.id === modalRegionFilter)?.provincias.includes(pantalla.sucursal?.provincia?.nombre);
+      
+      const matchesProvincia = !modalProvinciaFilter || modalProvinciaFilter === "all" || 
+        pantalla.sucursal?.provincia?.nombre === modalProvinciaFilter;
+      
+      const matchesCiudad = !modalCiudadFilter || modalCiudadFilter === "all" || 
+        pantalla.sucursal?.canton?.nombre === modalCiudadFilter;
+      
+      const matchesSucursal = !modalSucursalFilter || modalSucursalFilter === "all" || 
+        pantalla.sucursal?.nombre === modalSucursalFilter;
+      
+      return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesSucursal;
+    });
+  }, [pantallasDB, modalSearchTerm, modalRegionFilter, modalProvinciaFilter, modalCiudadFilter, modalSucursalFilter, regiones]);
 
   return (
     <div className="space-y-6">
@@ -309,7 +366,7 @@ const Publicidad = () => {
 
       {/* Modal de asignación a pantallas */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="bg-admin-surface border-admin-border-light max-w-2xl">
+        <DialogContent className="bg-admin-surface border-admin-border-light max-w-4xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle className="text-admin-text-primary">
               Asignar "{selectedItem?.nombre}" a Pantallas
@@ -320,44 +377,132 @@ const Publicidad = () => {
             <p className="text-admin-text-secondary">
               Seleccione las pantallas donde desea mostrar este contenido:
             </p>
-            
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {pantallas.map((pantalla) => (
-                <div
-                  key={pantalla.id}
-                  className={`flex items-center space-x-3 p-3 rounded-lg border ${
-                    pantalla.estado === 'activa' 
-                      ? 'border-admin-border-light bg-admin-background' 
-                      : 'border-admin-border-light bg-admin-surface opacity-50'
-                  }`}
-                >
-                  <Checkbox
-                    id={`pantalla-${pantalla.id}`}
-                    checked={selectedPantallas.includes(pantalla.id)}
-                    onCheckedChange={() => togglePantallaSelection(pantalla.id)}
-                    disabled={pantalla.estado === 'inactiva'}
+
+            {/* Filtros */}
+            <Card className="bg-admin-background border-admin-border-light">
+              <CardHeader>
+                <CardTitle className="flex items-center text-admin-text-primary text-base">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filtros
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-admin-text-muted h-4 w-4" />
+                  <Input
+                    placeholder="Buscar por identificador o nombre..."
+                    value={modalSearchTerm}
+                    onChange={(e) => setModalSearchTerm(e.target.value)}
+                    className="pl-10 bg-admin-surface border-admin-border-light text-admin-text-primary"
                   />
-                  <div className="flex-1">
-                    <label 
-                      htmlFor={`pantalla-${pantalla.id}`}
-                      className={`text-sm font-medium cursor-pointer ${
-                        pantalla.estado === 'activa' ? 'text-admin-text-primary' : 'text-admin-text-muted'
-                      }`}
-                    >
-                      {pantalla.nombre}
-                    </label>
-                    <p className="text-xs text-admin-text-muted">{pantalla.ubicacion}</p>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    pantalla.estado === 'activa' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {pantalla.estado}
-                  </span>
                 </div>
-              ))}
-            </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Select value={modalRegionFilter} onValueChange={handleModalRegionChange}>
+                    <SelectTrigger className="bg-admin-surface border-admin-border-light text-admin-text-primary">
+                      <SelectValue placeholder="Región" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-admin-surface border-admin-border-light z-[100]">
+                      <SelectItem value="all">Todas las regiones</SelectItem>
+                      <SelectItem value="costa">Costa</SelectItem>
+                      <SelectItem value="sierra">Sierra</SelectItem>
+                      <SelectItem value="amazonia">Amazonía</SelectItem>
+                      <SelectItem value="galapagos">Galápagos</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select 
+                    value={modalProvinciaFilter} 
+                    onValueChange={handleModalProvinciaChange}
+                    disabled={!modalRegionFilter || modalRegionFilter === "all"}
+                  >
+                    <SelectTrigger className="bg-admin-surface border-admin-border-light text-admin-text-primary">
+                      <SelectValue placeholder="Provincia" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-admin-surface border-admin-border-light z-[100]">
+                      <SelectItem value="all">Todas las provincias</SelectItem>
+                      {provinciasFiltradas.map((prov: any) => (
+                        <SelectItem key={prov.id} value={prov.nombre}>{prov.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select 
+                    value={modalCiudadFilter} 
+                    onValueChange={setModalCiudadFilter}
+                    disabled={!modalProvinciaFilter || modalProvinciaFilter === "all"}
+                  >
+                    <SelectTrigger className="bg-admin-surface border-admin-border-light text-admin-text-primary">
+                      <SelectValue placeholder="Ciudad" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-admin-surface border-admin-border-light z-[100]">
+                      <SelectItem value="all">Todas las ciudades</SelectItem>
+                      {cantonesFiltrados.map((canton: any) => (
+                        <SelectItem key={canton.id} value={canton.nombre}>{canton.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={modalSucursalFilter} onValueChange={setModalSucursalFilter}>
+                    <SelectTrigger className="bg-admin-surface border-admin-border-light text-admin-text-primary">
+                      <SelectValue placeholder="Sucursal" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-admin-surface border-admin-border-light z-[100]">
+                      <SelectItem value="all">Todas las sucursales</SelectItem>
+                      {sucursalesDB.map((s: any) => (
+                        <SelectItem key={s.id} value={s.nombre}>{s.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {loadingPantallas ? (
+              <div className="text-center py-8 text-admin-text-secondary">Cargando pantallas...</div>
+            ) : filteredPantallas.length === 0 ? (
+              <div className="text-center py-8 text-admin-text-secondary">No se encontraron pantallas con los filtros seleccionados</div>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {filteredPantallas.map((pantalla: any) => (
+                  <div
+                    key={pantalla.id}
+                    className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                      pantalla.estado === 'activa' 
+                        ? 'border-admin-border-light bg-admin-background' 
+                        : 'border-admin-border-light bg-admin-surface opacity-50'
+                    }`}
+                  >
+                    <Checkbox
+                      id={`pantalla-${pantalla.id}`}
+                      checked={selectedPantallas.includes(pantalla.id)}
+                      onCheckedChange={() => togglePantallaSelection(pantalla.id)}
+                      disabled={pantalla.estado === 'inactiva'}
+                    />
+                    <div className="flex-1">
+                      <label 
+                        htmlFor={`pantalla-${pantalla.id}`}
+                        className={`text-sm font-medium cursor-pointer ${
+                          pantalla.estado === 'activa' ? 'text-admin-text-primary' : 'text-admin-text-muted'
+                        }`}
+                      >
+                        {pantalla.identificador} - {pantalla.nombre}
+                      </label>
+                      <p className="text-xs text-admin-text-muted">
+                        {pantalla.sucursal?.nombre} - {pantalla.sucursal?.provincia?.nombre}, {pantalla.sucursal?.canton?.nombre}
+                      </p>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full capitalize ${
+                      pantalla.estado === 'activa' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {pantalla.estado}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button
@@ -370,7 +515,7 @@ const Publicidad = () => {
                 onClick={confirmAssignment}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                Confirmar Asignación
+                Confirmar Asignación ({selectedPantallas.length})
               </Button>
             </div>
           </div>
