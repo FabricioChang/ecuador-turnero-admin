@@ -2,22 +2,26 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Canton {
-  id: string;
+  id: number;
   nombre: string;
-  provincia_id: string;
+  provincia_id: number;
   created_at: string;
 }
 
-export const useCantones = (provinciaId?: string) => {
+/**
+ * Devuelve los cantones. Si se pasa `provinciaId`, filtra por esa provincia.
+ * En la nueva BD, `provincia_id` es INTEGER.
+ */
+export const useCantones = (provinciaId?: number) => {
   return useQuery({
     queryKey: ["cantones", provinciaId],
     queryFn: async () => {
       let query = supabase
         .from("cantones")
-        .select("*")
-        .order("nombre");
+        .select("id, nombre, provincia_id, created_at")
+        .order("nombre", { ascending: true });
 
-      if (provinciaId) {
+      if (provinciaId !== undefined) {
         query = query.eq("provincia_id", provinciaId);
       }
 
@@ -26,6 +30,7 @@ export const useCantones = (provinciaId?: string) => {
       if (error) throw error;
       return data as Canton[];
     },
-    enabled: true, // Siempre habilitada, pero filtra por provincia si se proporciona
+    // Siempre habilitada; el filtro por provincia es opcional
+    enabled: true,
   });
 };
