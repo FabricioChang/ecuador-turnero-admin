@@ -615,6 +615,13 @@ export default function Usuarios() {
                     <TableCell>{usuario.cedula || "—"}</TableCell>
                     <TableCell>{usuario.provincia?.nombre || "—"}</TableCell>
                     <TableCell>{usuario.canton?.nombre || "—"}</TableCell>
+                    <TableCell>
+                      {usuario.user_roles?.[0]?.role ? (
+                        <span className="capitalize">{usuario.user_roles[0].role}</span>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
