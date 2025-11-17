@@ -205,8 +205,8 @@ const Kioskos = () => {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div>
-                  <span className="text-admin-text-primary">{kiosko.id}</span>
-                  <p className="text-sm font-normal text-admin-text-secondary">{kiosko.nombre}</p>
+                  <span className="text-admin-text-primary text-lg font-semibold">{kiosko.identificador}</span>
+                  <p className="text-sm font-normal text-admin-text-secondary mt-1">{kiosko.nombre}</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full ${getEstadoColor(kiosko.estado)}`}>
                   {kiosko.estado}
@@ -215,7 +215,7 @@ const Kioskos = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-admin-text-muted">Ubicación</p>
+                <p className="text-xs text-admin-text-muted mb-1">Sucursal</p>
                 <p className="text-sm font-medium text-admin-text-primary">{kiosko.sucursal}</p>
               </div>
 
@@ -226,22 +226,17 @@ const Kioskos = () => {
                     <p className="text-sm font-medium text-admin-text-primary">
                       {kiosko.ubicacion}
                     </p>
-                    <p className="text-xs text-admin-text-muted">Ubicación</p>
+                    <p className="text-xs text-admin-text-muted">Ubicación física</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Battery className="h-4 w-4 text-admin-text-muted" />
+                  <Wifi className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className="text-sm font-medium text-admin-text-primary">ID: {kiosko.identificador}</p>
-                    <p className="text-xs text-admin-text-muted">Identificador</p>
+                    <p className="text-sm font-medium text-admin-text-primary">{kiosko.ciudad}</p>
+                    <p className="text-xs text-admin-text-muted">Ciudad</p>
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <p className="text-xs text-admin-text-muted">Sucursal</p>
-                <p className="text-sm text-admin-text-secondary">{kiosko.sucursal}</p>
               </div>
 
               <div className="flex space-x-2 pt-2">
