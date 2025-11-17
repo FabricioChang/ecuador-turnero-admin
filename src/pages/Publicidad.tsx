@@ -167,11 +167,13 @@ const Publicidad = () => {
   };
 
   const togglePantallaSelection = (pantallaId: string) => {
-    setSelectedPantallas(prev => 
-      prev.includes(pantallaId) 
-        ? prev.filter(id => id !== pantallaId)
-        : [...prev, pantallaId]
-    );
+    setSelectedPantallas(prev => {
+      if (prev.includes(pantallaId)) {
+        return prev.filter(id => id !== pantallaId);
+      } else {
+        return [...prev, pantallaId];
+      }
+    });
   };
 
   const handleModalRegionChange = (value: string) => {
@@ -295,7 +297,16 @@ const Publicidad = () => {
       {/* Tabla de contenidos */}
       <Card className="bg-admin-surface border-admin-border-light">
         <CardHeader>
-          <CardTitle className="text-admin-text-primary">Contenidos Publicitarios</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-admin-text-primary">Contenidos Publicitarios</CardTitle>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-admin-text-muted" />
+              <Input
+                placeholder="Buscar por nombre..."
+                className="pl-10 bg-admin-background border-admin-border-light"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -467,16 +478,17 @@ const Publicidad = () => {
                 {filteredPantallas.map((pantalla: any) => (
                   <div
                     key={pantalla.id}
-                    className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer ${
                       pantalla.estado === 'activa' 
                         ? 'border-admin-border-light bg-admin-background' 
                         : 'border-admin-border-light bg-admin-surface opacity-50'
                     }`}
+                    onClick={() => pantalla.estado === 'activa' && togglePantallaSelection(pantalla.id)}
                   >
                     <Checkbox
                       id={`pantalla-${pantalla.id}`}
                       checked={selectedPantallas.includes(pantalla.id)}
-                      onCheckedChange={() => togglePantallaSelection(pantalla.id)}
+                      onCheckedChange={(checked) => togglePantallaSelection(pantalla.id)}
                       disabled={pantalla.estado === 'inactiva'}
                     />
                     <div className="flex-1">

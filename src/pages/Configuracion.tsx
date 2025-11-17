@@ -4,14 +4,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { useUsuarioRoles } from "@/hooks/useUsuarioRoles";
 
 const Configuracion = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const [name, setName] = useState("Administrador");
-  const [email, setEmail] = useState("admin@empresa.com");
-  const [password, setPassword] = useState("••••••••");
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string>("");
+  const [profile, setProfile] = useState({
+    nombres: "", apellidos: "", email: "", telefono: "", cedula: "", identificador: "", provincia: "", canton: ""
+  });
+  const { data: rolesData = [] } = useUsuarioRoles(userId);
+  const [formData, setFormData] = useState({ nombres: "", apellidos: "", email: "", telefono: "" });
 
   useEffect(() => {
     document.title = "Configuración - Perfil de Administrador";
