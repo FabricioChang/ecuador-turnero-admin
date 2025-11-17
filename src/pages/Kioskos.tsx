@@ -201,39 +201,39 @@ const Kioskos = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredKioskos.map((kiosko) => (
-          <Card key={kiosko.id} className="bg-admin-surface border-admin-border-light">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div>
+          <Card key={kiosko.id} className="bg-admin-surface border-admin-border-light h-auto overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
                   <span className="text-admin-text-primary text-lg font-semibold">{kiosko.identificador}</span>
-                  <p className="text-sm font-normal text-admin-text-secondary mt-1">{kiosko.nombre}</p>
+                  <p className="text-sm font-normal text-admin-text-secondary mt-1 truncate">{kiosko.nombre}</p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${getEstadoColor(kiosko.estado)}`}>
+                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${getEstadoColor(kiosko.estado)}`}>
                   {kiosko.estado}
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div>
                 <p className="text-xs text-admin-text-muted mb-1">Sucursal</p>
-                <p className="text-sm font-medium text-admin-text-primary">{kiosko.sucursal}</p>
+                <p className="text-sm font-medium text-admin-text-primary truncate">{kiosko.sucursal}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2">
-                  <Monitor className="h-4 w-4 text-admin-text-muted" />
-                  <div>
-                    <p className="text-sm font-medium text-admin-text-primary">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Monitor className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-admin-text-primary truncate">
                       {kiosko.ubicacion}
                     </p>
                     <p className="text-xs text-admin-text-muted">Ubicación física</p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2">
-                  <Wifi className="h-4 w-4 text-admin-text-muted" />
-                  <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{kiosko.ciudad}</p>
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Wifi className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-admin-text-primary truncate">{kiosko.ciudad}</p>
                     <p className="text-xs text-admin-text-muted">Ciudad</p>
                   </div>
                 </div>

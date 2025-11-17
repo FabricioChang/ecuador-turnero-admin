@@ -228,12 +228,12 @@ const Sucursales = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredSucursales.map((sucursal) => (
-          <Card key={sucursal.id} className="bg-admin-surface border-admin-border-light">
-            <CardHeader>
+          <Card key={sucursal.id} className="bg-admin-surface border-admin-border-light h-auto overflow-hidden">
+            <CardHeader className="pb-3">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-admin-text-primary font-semibold">{sucursal.nombre}</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-admin-text-primary font-semibold truncate">{sucursal.nombre}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
                     sucursal.estado === 'Activa' 
                       ? 'bg-green-100 text-green-800' 
                       : sucursal.estado === 'Mantenimiento'
@@ -246,25 +246,25 @@ const Sucursales = () => {
                 <p className="text-xs text-admin-text-muted font-mono">{sucursal.identificador}</p>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start space-x-2">
-                <MapPin className="h-4 w-4 text-admin-text-muted mt-0.5" />
-                <span className="text-sm text-admin-text-secondary">{sucursal.direccion}</span>
+            <CardContent className="space-y-3">
+              <div className="flex items-start space-x-2 min-w-0">
+                <MapPin className="h-4 w-4 text-admin-text-muted mt-0.5 flex-shrink-0" />
+                <span className="text-sm text-admin-text-secondary break-words">{sucursal.direccion}</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2">
-                  <Monitor className="h-4 w-4 text-admin-text-muted" />
-                  <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{sucursal.telefono || 'N/A'}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Monitor className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-admin-text-primary truncate">{sucursal.telefono || 'N/A'}</p>
                     <p className="text-xs text-admin-text-muted">Teléfono</p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-admin-text-muted" />
-                  <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{sucursal.email || 'N/A'}</p>
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Users className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-admin-text-primary truncate" title={sucursal.email || 'N/A'}>{sucursal.email || 'N/A'}</p>
                     <p className="text-xs text-admin-text-muted">Email</p>
                   </div>
                 </div>
