@@ -62,15 +62,14 @@ const Kioskos = () => {
   };
 
   const filteredKioskos = kioskos.filter(kiosko => {
-    const matchesSearch = kiosko.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = kiosko.identificador.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          kiosko.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRegion = !regionFilter || kiosko.region === regionFilter;
     const matchesProvincia = !provinciaFilter || kiosko.provincia === provinciaFilter;
     const matchesCiudad = !ciudadFilter || kiosko.ciudad === ciudadFilter;
     const matchesSucursal = !sucursalFilter || kiosko.sucursal === sucursalFilter;
     const matchesEstado = !estadoFilter || kiosko.estado === estadoFilter;
     
-    return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesSucursal && matchesEstado;
+    return matchesSearch && matchesProvincia && matchesCiudad && matchesSucursal && matchesEstado;
   });
 
   const getEstadoColor = (estado: string) => {
@@ -146,7 +145,6 @@ const Kioskos = () => {
             <Select 
               value={provinciaFilter} 
               onValueChange={handleProvinciaChange}
-              disabled={loadingProvincias}
             >
               <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
                 <SelectValue placeholder="Provincia" />
@@ -162,7 +160,7 @@ const Kioskos = () => {
             <Select 
               value={ciudadFilter} 
               onValueChange={setCiudadFilter}
-              disabled={!provinciaFilter || provinciaFilter === "all" || loadingCantones}
+              disabled={!provinciaFilter || provinciaFilter === "all"}
             >
               <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
                 <SelectValue placeholder="Ciudad" />
@@ -223,27 +221,27 @@ const Kioskos = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
-                  <Wifi className="h-4 w-4 text-admin-text-muted" />
+                  <Monitor className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className={`text-sm font-medium ${getConexionColor(kiosko.conexion)}`}>
-                      {kiosko.conexion}
+                    <p className="text-sm font-medium text-admin-text-primary">
+                      {kiosko.ubicacion}
                     </p>
-                    <p className="text-xs text-admin-text-muted">Conexión</p>
+                    <p className="text-xs text-admin-text-muted">Ubicación</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <Battery className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{kiosko.bateria}%</p>
-                    <p className="text-xs text-admin-text-muted">Batería</p>
+                    <p className="text-sm font-medium text-admin-text-primary">ID: {kiosko.identificador}</p>
+                    <p className="text-xs text-admin-text-muted">Identificador</p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <p className="text-xs text-admin-text-muted">Última actividad</p>
-                <p className="text-sm text-admin-text-secondary">{kiosko.ultimaActividad}</p>
+                <p className="text-xs text-admin-text-muted">Sucursal</p>
+                <p className="text-sm text-admin-text-secondary">{kiosko.sucursal}</p>
               </div>
 
               <div className="flex space-x-2 pt-2">
