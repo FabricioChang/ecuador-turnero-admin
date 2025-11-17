@@ -25,7 +25,8 @@ export const useUsuarios = () => {
         .select(`
           *,
           provincia:provincias(nombre),
-          canton:cantones(nombre)
+          canton:cantones(nombre),
+          user_roles(role)
         `)
         .order("nombres");
 

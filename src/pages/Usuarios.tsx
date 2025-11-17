@@ -44,6 +44,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { useUsuarios } from "@/hooks/useUsuarios";
+import { useAsignarRol } from "@/hooks/useUsuarioRoles";
+import { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/integrations/supabase/client";
+
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 // Esquema de validación
 const schema = z.object({
@@ -68,6 +73,7 @@ const schema = z.object({
   provincia_id: z.string().min(1, "La provincia es obligatoria"),
   canton_id: z.string().min(1, "La ciudad es obligatoria"),
   direccion: z.string().optional(),
+  role: z.enum(["admin", "supervisor", "operador", "usuario"]).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -84,6 +90,7 @@ export default function Usuarios() {
   // Cargar datos desde la base de datos
   const { data: provincias = [], isLoading: loadingProvincias } = useProvincias();
   const { data: cantones = [], isLoading: loadingCantones } = useCantones();
+  const asignarRol = useAsignarRol();
 
   // Filtrar cantones por provincia seleccionada para filtros
   const cantonesFiltrados = useMemo(() => {
@@ -136,6 +143,7 @@ export default function Usuarios() {
       provincia_id: "",
       canton_id: "",
       direccion: "",
+      role: undefined,
     },
     mode: "onBlur",
   });
@@ -152,6 +160,7 @@ export default function Usuarios() {
       provincia_id: "",
       canton_id: "",
       direccion: "",
+      role: undefined,
     });
     setOpen(true);
   };
@@ -159,6 +168,7 @@ export default function Usuarios() {
   const onEditar = (u: any) => {
     setEditando(u);
     setProvinciaSeleccionada(u.provincia_id || "");
+    const userRole = u.user_roles?.[0]?.role || undefined;
     form.reset({
       nombres: u.nombres,
       apellidos: u.apellidos,
@@ -168,6 +178,7 @@ export default function Usuarios() {
       provincia_id: u.provincia_id || "",
       canton_id: u.canton_id || "",
       direccion: u.direccion || "",
+      role: userRole as any,
     });
     setOpen(true);
   };
@@ -204,26 +215,103 @@ export default function Usuarios() {
     return true;
   });
 
-  const onSubmit = (values: FormValues) => {
-    // Validación de duplicado (case-insensitive)
-    const esMismoCorreo = (email: string) =>
-      editando && editando.email.toLowerCase() === email.toLowerCase();
+  const onSubmit = async (values: FormValues) => {
+    try {
+      // Validación de duplicado (case-insensitive)
+      const esMismoCorreo = (email: string) =>
+        editando && editando.email.toLowerCase() === email.toLowerCase();
 
-    if (correosExistentes.has(values.email.toLowerCase()) && !esMismoCorreo(values.email)) {
-      form.setError("email", {
-        type: "manual",
-        message: "El correo ya existe",
+      if (correosExistentes.has(values.email.toLowerCase()) && !esMismoCorreo(values.email)) {
+        form.setError("email", {
+          type: "manual",
+          message: "El correo ya existe",
+        });
+        return;
+      }
+
+      if (editando) {
+        // Actualizar usuario existente
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            nombres: values.nombres,
+            apellidos: values.apellidos,
+            email: values.email,
+            telefono: values.telefono || null,
+            cedula: values.cedula || null,
+            provincia_id: values.provincia_id || null,
+            canton_id: values.canton_id || null,
+            direccion: values.direccion || null,
+          })
+          .eq("id", editando.id);
+
+        if (error) throw error;
+
+        // Asignar rol si se especificó
+        if (values.role) {
+          await asignarRol.mutateAsync({
+            userId: editando.id,
+            role: values.role as AppRole,
+          });
+        }
+
+        toast({ 
+          title: "Usuario actualizado", 
+          description: `${values.nombres} ${values.apellidos} fue editado.` 
+        });
+      } else {
+        // Crear nuevo usuario
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: values.email,
+          password: Math.random().toString(36).slice(-8), // Contraseña temporal
+          options: {
+            data: {
+              nombres: values.nombres,
+              apellidos: values.apellidos,
+              telefono: values.telefono,
+              cedula: values.cedula,
+            },
+          },
+        });
+
+        if (authError) throw authError;
+
+        // Actualizar el perfil con los datos adicionales
+        if (authData.user) {
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .update({
+              provincia_id: values.provincia_id || null,
+              canton_id: values.canton_id || null,
+              direccion: values.direccion || null,
+            })
+            .eq("id", authData.user.id);
+
+          if (profileError) throw profileError;
+
+          // Asignar rol si se especificó
+          if (values.role) {
+            await asignarRol.mutateAsync({
+              userId: authData.user.id,
+              role: values.role as AppRole,
+            });
+          }
+        }
+
+        toast({ 
+          title: "Usuario creado", 
+          description: `${values.nombres} ${values.apellidos} fue agregado.` 
+        });
+      }
+
+      setOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
       });
-      return;
     }
-
-    if (editando) {
-      toast({ title: "Usuario actualizado", description: `${values.nombres} ${values.apellidos} fue editado.` });
-    } else {
-      toast({ title: "Usuario creado", description: `${values.nombres} ${values.apellidos} fue agregado.` });
-    }
-
-    setOpen(false);
   };
 
   const limpiarFiltros = () => {
@@ -404,6 +492,30 @@ export default function Usuarios() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rol</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar rol" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Administrador</SelectItem>
+                            <SelectItem value="supervisor">Supervisor</SelectItem>
+                            <SelectItem value="operador">Operador</SelectItem>
+                            <SelectItem value="usuario">Usuario</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <DialogFooter>
                   <Button type="submit">{editando ? "Guardar cambios" : "Crear usuario"}</Button>
                 </DialogFooter>
@@ -489,6 +601,7 @@ export default function Usuarios() {
                   <TableHead>Cédula</TableHead>
                   <TableHead>Provincia</TableHead>
                   <TableHead>Cantón</TableHead>
+                  <TableHead>Rol</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
