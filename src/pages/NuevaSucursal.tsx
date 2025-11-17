@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { useRegiones } from "@/hooks/useRegiones";
+import { useCreateSucursal } from "@/hooks/useSucursalesMutations";
 
 interface Kiosko {
   id: number;
@@ -28,18 +29,15 @@ interface Kiosko {
 
 const NuevaSucursal = () => {
   const navigate = useNavigate();
-  
-  // Generar identificador incremental automático
-  const sucursalesExistentes = [1, 2, 3, 4, 5]; // Simulación - en producción vendría de la base de datos
-  const nuevoIdentificador = String(Math.max(...sucursalesExistentes, 0) + 1).padStart(4, "0");
+  const createSucursal = useCreateSucursal();
   
   const [formData, setFormData] = useState({
-    identificador: `SUC-${nuevoIdentificador}`,
     nombre: "",
-    descripcion: "",
+    provincia_id: "",
+    canton_id: "",
     direccion: "",
-    horarioApertura: "",
-    horarioCierre: "",
+    telefono: "",
+    email: "",
   });
 
   const [searchKioskos, setSearchKioskos] = useState("");
@@ -62,12 +60,11 @@ const NuevaSucursal = () => {
     return provincias.filter(p => regionSeleccionada?.provincias.includes(p.nombre));
   }, [regionFilter, provincias, regiones]);
 
-  // Filtrar cantones por provincia seleccionada
+  // Filtrar cantones por provincia seleccionada en el formulario
   const cantonesFiltrados = useMemo(() => {
-    if (!provinciaFilter) return cantones;
-    const provinciaSeleccionada = provincias.find(p => p.nombre === provinciaFilter);
-    return cantones.filter(c => c.provincia_id === provinciaSeleccionada?.id);
-  }, [provinciaFilter, cantones, provincias]);
+    if (!formData.provincia_id) return [];
+    return cantones.filter(c => c.provincia_id === formData.provincia_id);
+  }, [formData.provincia_id, cantones]);
 
   const kioskosDisponibles: Kiosko[] = [
     {
@@ -179,7 +176,7 @@ const NuevaSucursal = () => {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.nombre.trim()) {
@@ -191,32 +188,39 @@ const NuevaSucursal = () => {
       return;
     }
 
-    if (!formData.direccion.trim()) {
+    if (!formData.provincia_id) {
       toast({
         title: "Error",
-        description: "La dirección es requerida",
+        description: "La provincia es requerida",
         variant: "destructive"
       });
       return;
     }
 
-    if (!formData.horarioApertura || !formData.horarioCierre) {
+    if (!formData.canton_id) {
       toast({
         title: "Error",
-        description: "Los horarios de apertura y cierre son requeridos",
+        description: "El cantón es requerido",
         variant: "destructive"
       });
       return;
     }
 
-    // Simular guardado
-    toast({
-      title: "Éxito",
-      description: `Sucursal "${formData.nombre}" creada exitosamente con ${selectedKioskos.length} kioskos asignados`,
-    });
+    try {
+      await createSucursal.mutateAsync({
+        nombre: formData.nombre,
+        provincia_id: formData.provincia_id,
+        canton_id: formData.canton_id,
+        direccion: formData.direccion || undefined,
+        telefono: formData.telefono || undefined,
+        email: formData.email || undefined,
+      });
 
-    // Regresar a la lista
-    navigate('/sucursales');
+      navigate('/sucursales');
+    } catch (error) {
+      // El error ya se maneja en el hook
+      console.error('Error al crear sucursal:', error);
+    }
   };
 
   const clearKioskoFilters = () => {
@@ -265,17 +269,6 @@ const NuevaSucursal = () => {
             <CardTitle className="text-admin-text-primary">Información Básica</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="identificador">Identificador</Label>
-              <Input
-                id="identificador"
-                value={formData.identificador}
-                disabled
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">Este código se genera automáticamente</p>
-            </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="nombre">Nombre de la Sucursal *</Label>
@@ -288,47 +281,77 @@ const NuevaSucursal = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="direccion">Dirección *</Label>
+                <Label htmlFor="direccion">Dirección</Label>
                 <Input
                   id="direccion"
                   value={formData.direccion}
                   onChange={(e) => handleInputChange('direccion', e.target.value)}
                   placeholder="Ej: Av. 10 de Agosto 123"
-                  required
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="descripcion">Descripción</Label>
-              <Textarea
-                id="descripcion"
-                value={formData.descripcion}
-                onChange={(e) => handleInputChange('descripcion', e.target.value)}
-                placeholder="Descripción breve de la sucursal..."
-                rows={3}
-              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="horarioApertura">Horario de Apertura *</Label>
+                <Label htmlFor="provincia">Provincia *</Label>
+                <Select
+                  value={formData.provincia_id}
+                  onValueChange={(value) => {
+                    handleInputChange('provincia_id', value);
+                    handleInputChange('canton_id', ''); // Reset canton when province changes
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar provincia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {provincias.map((provincia) => (
+                      <SelectItem key={provincia.id} value={provincia.id}>
+                        {provincia.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="canton">Cantón *</Label>
+                <Select
+                  value={formData.canton_id}
+                  onValueChange={(value) => handleInputChange('canton_id', value)}
+                  disabled={!formData.provincia_id}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cantón" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cantonesFiltrados.map((canton) => (
+                      <SelectItem key={canton.id} value={canton.id}>
+                        {canton.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="telefono">Teléfono</Label>
                 <Input
-                  id="horarioApertura"
-                  type="time"
-                  value={formData.horarioApertura}
-                  onChange={(e) => handleInputChange('horarioApertura', e.target.value)}
-                  required
+                  id="telefono"
+                  value={formData.telefono}
+                  onChange={(e) => handleInputChange('telefono', e.target.value)}
+                  placeholder="Ej: 02-2345678"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="horarioCierre">Horario de Cierre *</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="horarioCierre"
-                  type="time"
-                  value={formData.horarioCierre}
-                  onChange={(e) => handleInputChange('horarioCierre', e.target.value)}
-                  required
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  placeholder="Ej: sucursal@empresa.com"
                 />
               </div>
             </div>
