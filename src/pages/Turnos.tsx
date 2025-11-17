@@ -39,6 +39,9 @@ interface Turno {
   posicionFila: number;
   tiempoEspera: number;
   observaciones?: string;
+  region: string;
+  provincia: string;
+  ciudad: string;
 }
 
 const mockTurnos: Turno[] = [
@@ -53,7 +56,10 @@ const mockTurnos: Turno[] = [
     fechaCreacion: "2024-01-15",
     horaCreacion: "09:30",
     posicionFila: 1,
-    tiempoEspera: 15
+    tiempoEspera: 15,
+    region: "sierra",
+    provincia: "Pichincha",
+    ciudad: "Quito"
   },
   {
     id: "2",
@@ -68,7 +74,10 @@ const mockTurnos: Turno[] = [
     fechaCita: "2024-01-15",
     horaCita: "10:00",
     posicionFila: 0,
-    tiempoEspera: 8
+    tiempoEspera: 8,
+    region: "costa",
+    provincia: "Guayas",
+    ciudad: "Guayaquil"
   },
   {
     id: "3",
@@ -82,7 +91,10 @@ const mockTurnos: Turno[] = [
     horaCreacion: "10:00",
     posicionFila: 0,
     tiempoEspera: 45,
-    observaciones: "Cliente no se presentó"
+    observaciones: "Cliente no se presentó",
+    region: "sierra",
+    provincia: "Azuay",
+    ciudad: "Cuenca"
   },
   {
     id: "4",
@@ -98,7 +110,10 @@ const mockTurnos: Turno[] = [
     horaCita: "09:00",
     posicionFila: 0,
     tiempoEspera: 0,
-    observaciones: "Reagendado por solicitud del cliente"
+    observaciones: "Reagendado por solicitud del cliente",
+    region: "sierra",
+    provincia: "Pichincha",
+    ciudad: "Quito"
   }
 ];
 
@@ -111,6 +126,8 @@ const Turnos = () => {
   const [sucursalFilter, setSucursalFilter] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("");
   const [categoriaFilter, setCategoriaFilter] = useState("");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
   const [modalDetalle, setModalDetalle] = useState(false);
   const { toast } = useToast();
@@ -123,15 +140,53 @@ const Turnos = () => {
     reagendados: turnos.filter(t => t.estado === 'reagendado').length
   };
 
-  // Filtrar turnos por búsqueda
+  // Filtrar turnos
   const turnosFiltrados = turnos.filter(turno => {
-    if (!busqueda) return true;
-    const searchLower = busqueda.toLowerCase();
-    return (
-      turno.numero.toLowerCase().includes(searchLower) ||
-      turno.cliente.nombre.toLowerCase().includes(searchLower) ||
-      turno.cliente.documento.includes(busqueda)
-    );
+    // Búsqueda por identificador
+    if (busqueda && !turno.numero.toLowerCase().includes(busqueda.toLowerCase())) {
+      return false;
+    }
+    
+    // Filtro por región
+    if (regionFilter && turno.region !== regionFilter) {
+      return false;
+    }
+    
+    // Filtro por provincia
+    if (provinciaFilter && turno.provincia !== provinciaFilter) {
+      return false;
+    }
+    
+    // Filtro por ciudad
+    if (ciudadFilter && turno.ciudad !== ciudadFilter) {
+      return false;
+    }
+    
+    // Filtro por sucursal
+    if (sucursalFilter && turno.sucursal !== sucursalFilter) {
+      return false;
+    }
+    
+    // Filtro por estado
+    if (estadoFilter && turno.estado !== estadoFilter) {
+      return false;
+    }
+    
+    // Filtro por categoría
+    if (categoriaFilter && turno.categoria !== categoriaFilter) {
+      return false;
+    }
+    
+    // Filtro por rango de fechas
+    if (fechaDesde && turno.fechaCreacion < fechaDesde) {
+      return false;
+    }
+    
+    if (fechaHasta && turno.fechaCreacion > fechaHasta) {
+      return false;
+    }
+    
+    return true;
   });
 
   const getEstadoBadge = (estado: string) => {
@@ -226,31 +281,136 @@ const Turnos = () => {
         </Card>
       </div>
 
-      {/* Buscador */}
+      {/* Filtros */}
       <Card className="bg-admin-surface border-admin-border-light">
         <CardHeader>
           <CardTitle className="text-admin-text-primary flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Buscar Turnos
+            <Filter className="h-5 w-5" />
+            Filtros
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-admin-text-muted" />
-                <Input
-                  placeholder="Buscar por número de turno, nombre o documento..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-admin-text-muted" />
+              <Input
+                placeholder="Buscar por identificador..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <Button variant="outline" onClick={() => setBusqueda("")}>
-              Limpiar
-            </Button>
+            
+            <Select value={regionFilter} onValueChange={setRegionFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Región" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las regiones</SelectItem>
+                <SelectItem value="costa">Costa</SelectItem>
+                <SelectItem value="sierra">Sierra</SelectItem>
+                <SelectItem value="amazonia">Amazonía</SelectItem>
+                <SelectItem value="galapagos">Galápagos</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={provinciaFilter} onValueChange={setProvinciaFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Provincia" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las provincias</SelectItem>
+                <SelectItem value="Pichincha">Pichincha</SelectItem>
+                <SelectItem value="Guayas">Guayas</SelectItem>
+                <SelectItem value="Azuay">Azuay</SelectItem>
+                <SelectItem value="Manabí">Manabí</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={ciudadFilter} onValueChange={setCiudadFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Ciudad" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las ciudades</SelectItem>
+                <SelectItem value="Quito">Quito</SelectItem>
+                <SelectItem value="Guayaquil">Guayaquil</SelectItem>
+                <SelectItem value="Cuenca">Cuenca</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las sucursales</SelectItem>
+                <SelectItem value="Sucursal Centro">Sucursal Centro</SelectItem>
+                <SelectItem value="Sucursal Norte">Sucursal Norte</SelectItem>
+                <SelectItem value="Sucursal Sur">Sucursal Sur</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="espera">En Espera</SelectItem>
+                <SelectItem value="atendido">Atendido</SelectItem>
+                <SelectItem value="perdido">Perdido</SelectItem>
+                <SelectItem value="reagendado">Reagendado</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las categorías</SelectItem>
+                <SelectItem value="Atención General">Atención General</SelectItem>
+                <SelectItem value="Consultas">Consultas</SelectItem>
+                <SelectItem value="Reclamos">Reclamos</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div>
+              <Label className="text-sm mb-2 block">Fecha Desde</Label>
+              <Input
+                type="date"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm mb-2 block">Fecha Hasta</Label>
+              <Input
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+              />
+            </div>
           </div>
+
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setBusqueda("");
+              setRegionFilter("");
+              setProvinciaFilter("");
+              setCiudadFilter("");
+              setSucursalFilter("");
+              setEstadoFilter("");
+              setCategoriaFilter("");
+              setFechaDesde("");
+              setFechaHasta("");
+            }}
+          >
+            Limpiar Filtros
+          </Button>
         </CardContent>
       </Card>
 
