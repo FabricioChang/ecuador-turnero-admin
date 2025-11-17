@@ -42,6 +42,9 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Pencil, Plus, Search, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useProvincias } from "@/hooks/useProvincias";
+import { useCantones } from "@/hooks/useCantones";
+import { useRegiones } from "@/hooks/useRegiones";
 
 // Tipos
 interface Usuario {
@@ -60,22 +63,6 @@ interface Usuario {
 
 const sucursales = ["Sucursal Centro", "Sucursal Norte", "Sucursal Sur"];
 const rolesPosibles = ["Técnico", "Gerente", "Administrador"];
-
-const regiones = {
-  costa: ["Esmeraldas", "Manabí", "Los Ríos", "Guayas", "Santa Elena", "El Oro"],
-  sierra: ["Carchi", "Imbabura", "Pichincha", "Cotopaxi", "Tungurahua", "Bolívar", "Chimborazo", "Cañar", "Azuay", "Loja"],
-  amazonia: ["Sucumbíos", "Napo", "Orellana", "Pastaza", "Morona Santiago", "Zamora Chinchipe"],
-  galapagos: ["Galápagos"]
-};
-
-const ciudadesPorProvincia: Record<string, string[]> = {
-  "Pichincha": ["Quito", "Cayambe", "Mejía", "Pedro Moncayo", "Rumiñahui"],
-  "Guayas": ["Guayaquil", "Durán", "Samborondón", "Daule", "Milagro"],
-  "Azuay": ["Cuenca", "Gualaceo", "Paute", "Chordeleg", "Sigsig"],
-  "Manabí": ["Portoviejo", "Manta", "Chone", "Jipijapa"],
-  "Esmeraldas": ["Esmeraldas", "Atacames", "Quinindé"],
-  "El Oro": ["Machala", "Pasaje", "Santa Rosa", "Huaquillas"],
-};
 
 // Esquema de validación
 const schema = z.object({
@@ -157,6 +144,25 @@ export default function Usuarios() {
   const [editando, setEditando] = useState<Usuario | null>(null);
   const { toast } = useToast();
 
+  // Cargar datos desde la base de datos
+  const { regiones } = useRegiones();
+  const { data: provincias = [], isLoading: loadingProvincias } = useProvincias();
+  const { data: cantones = [], isLoading: loadingCantones } = useCantones();
+
+  // Filtrar provincias por región seleccionada para filtros
+  const provinciasFiltradas = useMemo(() => {
+    if (!regionFilter) return provincias;
+    const regionSeleccionada = regiones.find(r => r.id === regionFilter);
+    return provincias.filter(p => regionSeleccionada?.provincias.includes(p.nombre));
+  }, [regionFilter, provincias, regiones]);
+
+  // Filtrar cantones por provincia seleccionada para filtros
+  const cantonesFiltrados = useMemo(() => {
+    if (!provinciaFilter) return cantones;
+    const provinciaSeleccionada = provincias.find(p => p.nombre === provinciaFilter);
+    return cantones.filter(c => c.provincia_id === provinciaSeleccionada?.id);
+  }, [provinciaFilter, cantones, provincias]);
+
   // SEO básico
   useEffect(() => {
     document.title = "Usuarios administrativos | Panel";
@@ -185,6 +191,20 @@ export default function Usuarios() {
 
   const [regionSeleccionada, setRegionSeleccionada] = useState("");
   const [provinciaSeleccionada, setProvinciaSeleccionada] = useState("");
+
+  // Filtrar provincias por región seleccionada para el formulario
+  const provinciasFormulario = useMemo(() => {
+    if (!regionSeleccionada) return [];
+    const regionSel = regiones.find(r => r.id === regionSeleccionada);
+    return provincias.filter(p => regionSel?.provincias.includes(p.nombre));
+  }, [regionSeleccionada, provincias, regiones]);
+
+  // Filtrar cantones por provincia seleccionada para el formulario
+  const cantonesFormulario = useMemo(() => {
+    if (!provinciaSeleccionada) return [];
+    const provinciaSel = provincias.find(p => p.nombre === provinciaSeleccionada);
+    return cantones.filter(c => c.provincia_id === provinciaSel?.id);
+  }, [provinciaSeleccionada, cantones, provincias]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -460,15 +480,15 @@ export default function Usuarios() {
                               form.setValue("ciudad", "");
                             }} 
                             value={field.value}
-                            disabled={!regionSeleccionada}
+                            disabled={!regionSeleccionada || loadingProvincias}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecciona provincia" />
                             </SelectTrigger>
-                            <SelectContent>
-                              {regionSeleccionada && regiones[regionSeleccionada as keyof typeof regiones]?.map((p) => (
-                                <SelectItem key={p} value={p}>
-                                  {p}
+                            <SelectContent className="z-50">
+                              {provinciasFormulario.map((p) => (
+                                <SelectItem key={p.id} value={p.nombre}>
+                                  {p.nombre}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -489,15 +509,15 @@ export default function Usuarios() {
                           <Select 
                             onValueChange={field.onChange} 
                             value={field.value}
-                            disabled={!provinciaSeleccionada}
+                            disabled={!provinciaSeleccionada || loadingCantones}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecciona ciudad" />
                             </SelectTrigger>
-                            <SelectContent>
-                              {provinciaSeleccionada && ciudadesPorProvincia[provinciaSeleccionada]?.map((c) => (
-                                <SelectItem key={c} value={c}>
-                                  {c}
+                            <SelectContent className="z-50">
+                              {cantonesFormulario.map((c) => (
+                                <SelectItem key={c.id} value={c.nombre}>
+                                  {c.nombre}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -594,37 +614,35 @@ export default function Usuarios() {
               <SelectTrigger>
                 <SelectValue placeholder="Región" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50">
                 <SelectItem value="all">Todas las regiones</SelectItem>
-                <SelectItem value="costa">Costa</SelectItem>
-                <SelectItem value="sierra">Sierra</SelectItem>
-                <SelectItem value="amazonia">Amazonía</SelectItem>
-                <SelectItem value="galapagos">Galápagos</SelectItem>
+                {regiones.map(region => (
+                  <SelectItem key={region.id} value={region.id}>{region.nombre}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            <Select value={provinciaFilter} onValueChange={setProvinciaFilter}>
+            <Select value={provinciaFilter} onValueChange={setProvinciaFilter} disabled={loadingProvincias}>
               <SelectTrigger>
                 <SelectValue placeholder="Provincia" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50">
                 <SelectItem value="all">Todas las provincias</SelectItem>
-                <SelectItem value="Pichincha">Pichincha</SelectItem>
-                <SelectItem value="Guayas">Guayas</SelectItem>
-                <SelectItem value="Azuay">Azuay</SelectItem>
-                <SelectItem value="Manabí">Manabí</SelectItem>
+                {provinciasFiltradas.map(provincia => (
+                  <SelectItem key={provincia.id} value={provincia.nombre}>{provincia.nombre}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            <Select value={ciudadFilter} onValueChange={setCiudadFilter}>
+            <Select value={ciudadFilter} onValueChange={setCiudadFilter} disabled={loadingCantones}>
               <SelectTrigger>
                 <SelectValue placeholder="Ciudad" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50">
                 <SelectItem value="all">Todas las ciudades</SelectItem>
-                <SelectItem value="Quito">Quito</SelectItem>
-                <SelectItem value="Guayaquil">Guayaquil</SelectItem>
-                <SelectItem value="Cuenca">Cuenca</SelectItem>
+                {cantonesFiltrados.map(canton => (
+                  <SelectItem key={canton.id} value={canton.nombre}>{canton.nombre}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

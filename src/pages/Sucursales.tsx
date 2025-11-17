@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, MapPin, Users, Monitor, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useProvincias } from "@/hooks/useProvincias";
+import { useCantones } from "@/hooks/useCantones";
+import { useRegiones } from "@/hooks/useRegiones";
 
 const Sucursales = () => {
   const navigate = useNavigate();
@@ -15,18 +18,24 @@ const Sucursales = () => {
   const [estadoFilter, setEstadoFilter] = useState("");
   const [kioskosFilter, setKioskosFilter] = useState("");
 
-  const regiones = {
-    costa: ["Esmeraldas", "Manabí", "Los Ríos", "Guayas", "Santa Elena", "El Oro"],
-    sierra: ["Carchi", "Imbabura", "Pichincha", "Cotopaxi", "Tungurahua", "Bolívar", "Chimborazo", "Cañar", "Azuay", "Loja"],
-    amazonia: ["Sucumbíos", "Napo", "Orellana", "Pastaza", "Morona Santiago", "Zamora Chinchipe"],
-    galapagos: ["Galápagos"]
-  };
+  // Cargar datos desde la base de datos
+  const { regiones } = useRegiones();
+  const { data: provincias = [], isLoading: loadingProvincias } = useProvincias();
+  const { data: cantones = [], isLoading: loadingCantones } = useCantones();
 
-  const ciudades = {
-    "Pichincha": ["Quito", "Cayambe", "Mejía", "Pedro Moncayo", "Rumiñahui", "San Miguel de los Bancos"],
-    "Guayas": ["Guayaquil", "Durán", "Samborondón", "Daule", "Milagro", "Naranjal"],
-    "Azuay": ["Cuenca", "Gualaceo", "Paute", "Chordeleg", "Sigsig"]
-  };
+  // Filtrar provincias por región seleccionada
+  const provinciasFiltradas = useMemo(() => {
+    if (!regionFilter) return provincias;
+    const regionSeleccionada = regiones.find(r => r.id === regionFilter);
+    return provincias.filter(p => regionSeleccionada?.provincias.includes(p.nombre));
+  }, [regionFilter, provincias, regiones]);
+
+  // Filtrar cantones por provincia seleccionada
+  const cantonesFiltrados = useMemo(() => {
+    if (!provinciaFilter) return cantones;
+    const provinciaSeleccionada = provincias.find(p => p.nombre === provinciaFilter);
+    return cantones.filter(c => c.provincia_id === provinciaSeleccionada?.id);
+  }, [provinciaFilter, cantones, provincias]);
 
   const sucursales = [
     {
@@ -196,14 +205,14 @@ const Sucursales = () => {
               <Select 
                 value={provinciaFilter} 
                 onValueChange={handleProvinciaChange}
-                disabled={!regionFilter}
+                disabled={loadingProvincias}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar provincia" />
                 </SelectTrigger>
-                <SelectContent>
-                  {regionFilter && regiones[regionFilter as keyof typeof regiones]?.map(provincia => (
-                    <SelectItem key={provincia} value={provincia}>{provincia}</SelectItem>
+                <SelectContent className="bg-card border-border z-50">
+                  {provinciasFiltradas.map(provincia => (
+                    <SelectItem key={provincia.id} value={provincia.nombre}>{provincia.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -214,14 +223,14 @@ const Sucursales = () => {
               <Select 
                 value={ciudadFilter} 
                 onValueChange={setCiudadFilter}
-                disabled={!provinciaFilter}
+                disabled={!provinciaFilter || loadingCantones}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar ciudad" />
                 </SelectTrigger>
-                <SelectContent>
-                  {provinciaFilter && ciudades[provinciaFilter as keyof typeof ciudades]?.map(ciudad => (
-                    <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
+                <SelectContent className="bg-card border-border z-50">
+                  {cantonesFiltrados.map(canton => (
+                    <SelectItem key={canton.id} value={canton.nombre}>{canton.nombre}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
