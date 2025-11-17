@@ -28,10 +28,12 @@ export const useUsuarios = () => {
           canton:cantones(nombre),
           user_roles(role)
         `)
-        .order("nombres");
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as any[];
     },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 };

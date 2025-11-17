@@ -14,6 +14,7 @@ import { useCantones } from "@/hooks/useCantones";
 import { useRegiones } from "@/hooks/useRegiones";
 import { useSucursales } from "@/hooks/useSucursales";
 import { usePantallas } from "@/hooks/usePantallas";
+import { usePublicidad } from "@/hooks/usePublicidad";
 
 interface PublicidadItem {
   id: number;
@@ -50,36 +51,9 @@ const Publicidad = () => {
   const { data: cantones = [] } = useCantones();
   const { data: sucursalesDB = [] } = useSucursales();
   const { data: pantallasDB = [], isLoading: loadingPantallas } = usePantallas();
-
-  const publicidadItems: PublicidadItem[] = [
-    {
-      id: 1,
-      nombre: "Promoción Verano 2024",
-      tipo: "imagen",
-      archivo: "promo_verano.jpg",
-      duracion: 15,
-      fecha: "2024-01-15",
-      estado: "activo"
-    },
-    {
-      id: 2,
-      nombre: "Video Corporativo",
-      tipo: "video", 
-      archivo: "video_corp.mp4",
-      duracion: 30,
-      fecha: "2024-01-10",
-      estado: "activo"
-    },
-    {
-      id: 3,
-      nombre: "Oferta Especial",
-      tipo: "imagen",
-      archivo: "oferta_especial.png",
-      duracion: 10,
-      fecha: "2024-01-08",
-      estado: "inactivo"
-    }
-  ];
+  
+  // Load publicidad from database
+  const { data: publicidadDB = [], isLoading: loadingPublicidad } = usePublicidad();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -321,7 +295,7 @@ const Publicidad = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {publicidadItems.map((item) => (
+              {publicidadDB.map((item: any) => (
                 <TableRow key={item.id} className="border-admin-border-light">
                   <TableCell className="text-admin-text-primary font-medium">
                     <div className="flex items-center space-x-2">

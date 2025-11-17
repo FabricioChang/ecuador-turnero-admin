@@ -58,7 +58,7 @@ const Configuracion = () => {
           canton:cantones(nombre)
         `)
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
