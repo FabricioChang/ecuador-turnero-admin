@@ -138,7 +138,14 @@ export default function Roles() {
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState<Rol | null>(null);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>("");
+  const [esAdministrador, setEsAdministrador] = useState(false);
   const { toast } = useToast();
+  
+  const todosLosPermisos = permisosDisponibles.map(p => p.id);
+  
+  const tieneTodasLosPermisos = (permisos: string[]) => {
+    return todosLosPermisos.every(p => permisos.includes(p));
+  };
 
   // SEO básico
   useEffect(() => {
@@ -179,6 +186,7 @@ export default function Roles() {
     setEditando(null);
     form.reset({ nombre: "", permisos: [] });
     setCategoriaSeleccionada("");
+    setEsAdministrador(false);
     setOpen(true);
   };
 
@@ -186,7 +194,17 @@ export default function Roles() {
     setEditando(r);
     form.reset({ nombre: r.nombre, permisos: r.permisos });
     setCategoriaSeleccionada("");
+    setEsAdministrador(tieneTodasLosPermisos(r.permisos));
     setOpen(true);
+  };
+  
+  const toggleAdministrador = (checked: boolean) => {
+    setEsAdministrador(checked);
+    if (checked) {
+      form.setValue("permisos", todosLosPermisos);
+    } else {
+      form.setValue("permisos", []);
+    }
   };
 
   const onSubmit = (values: FormValues) => {
@@ -245,9 +263,24 @@ export default function Roles() {
                 />
 
                 <div className="space-y-4">
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/50">
+                    <Checkbox 
+                      id="administrador" 
+                      checked={esAdministrador}
+                      onCheckedChange={toggleAdministrador}
+                    />
+                    <Label htmlFor="administrador" className="cursor-pointer font-medium">
+                      Administrador (Todos los permisos)
+                    </Label>
+                  </div>
+
                   <div>
                     <Label>Categoría</Label>
-                    <Select value={categoriaSeleccionada} onValueChange={setCategoriaSeleccionada}>
+                    <Select 
+                      value={categoriaSeleccionada} 
+                      onValueChange={setCategoriaSeleccionada}
+                      disabled={esAdministrador}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona una categoría" />
                       </SelectTrigger>
@@ -267,7 +300,13 @@ export default function Roles() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Permisos</FormLabel>
-                        {categoriaSeleccionada ? (
+                        {esAdministrador ? (
+                          <div className="border rounded-lg p-4 bg-muted/30">
+                            <p className="text-sm text-muted-foreground">
+                              ✓ Todos los permisos están otorgados (Administrador)
+                            </p>
+                          </div>
+                        ) : categoriaSeleccionada ? (
                           <div className="border rounded-lg p-4 space-y-3">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {categorias
@@ -280,8 +319,12 @@ export default function Roles() {
                                         checked={checked}
                                         onCheckedChange={(v) => {
                                           const isChecked = Boolean(v);
-                                          if (isChecked) field.onChange([...(field.value ?? []), perm.id]);
-                                          else field.onChange((field.value ?? []).filter((p: string) => p !== perm.id));
+                                          if (isChecked) {
+                                            field.onChange([...(field.value ?? []), perm.id]);
+                                          } else {
+                                            field.onChange((field.value ?? []).filter((p: string) => p !== perm.id));
+                                            setEsAdministrador(false);
+                                          }
                                         }}
                                       />
                                       <span className="text-sm">{perm.label}</span>
@@ -319,23 +362,39 @@ export default function Roles() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {roles.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell>{r.nombre}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-2">
-                    {r.permisos.map((p) => (
-                      <Badge key={p} variant="secondary">{etiquetaPermiso(p)}</Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Button variant="outline" size="sm" onClick={() => onEditar(r)}>
-                    <Pencil className="mr-2 h-4 w-4" /> Editar
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {roles.map((r) => {
+              const esAdmin = tieneTodasLosPermisos(r.permisos);
+              return (
+                <TableRow key={r.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {r.nombre}
+                      {esAdmin && (
+                        <Badge variant="default" className="ml-2">
+                          Administrador
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {esAdmin ? (
+                      <Badge variant="secondary">Todos los permisos</Badge>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {r.permisos.map((p) => (
+                          <Badge key={p} variant="secondary">{etiquetaPermiso(p)}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" onClick={() => onEditar(r)}>
+                      <Pencil className="mr-2 h-4 w-4" /> Editar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </section>
