@@ -145,7 +145,7 @@ const Categorias = () => {
           <Card key={categoria.id} className="bg-admin-surface border-admin-border-light h-auto overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between gap-2">
-                <span className="text-admin-text-primary truncate">{categoria.nombre}</span>
+                <span className="text-admin-text-primary truncate leading-relaxed pb-1">{categoria.nombre}</span>
                 <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
                   categoria.estado === 'Activa' 
                     ? 'bg-green-100 text-green-800' 
@@ -188,7 +188,7 @@ const Categorias = () => {
                 <div className="flex items-center space-x-2 min-w-0">
                   <Users className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-admin-text-primary truncate" title={categoria.descripcion}>{categoria.descripcion}</p>
+                    <p className="text-sm font-medium text-admin-text-primary truncate leading-relaxed pb-1" title={categoria.descripcion}>{categoria.descripcion}</p>
                     <p className="text-xs text-admin-text-muted">Descripción</p>
                   </div>
                 </div>

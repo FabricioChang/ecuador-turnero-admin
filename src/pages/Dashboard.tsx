@@ -1,31 +1,50 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Monitor, Building2, Users, Clock } from "lucide-react";
+import { useKioskos } from "@/hooks/useKioskos";
+import { useSucursales } from "@/hooks/useSucursales";
+import { useTurnos } from "@/hooks/useTurnos";
 
 const Dashboard = () => {
+  const { data: kioskosData = [] } = useKioskos();
+  const { data: sucursalesData = [] } = useSucursales();
+  const { data: turnosData = [] } = useTurnos();
+
+  const kioskosActivos = kioskosData.filter((k: any) => k.estado === "activo").length;
+  const kioskosMantenimiento = kioskosData.filter((k: any) => k.estado === "mantenimiento").length;
+  const sucursalesActivas = sucursalesData.filter((s: any) => s.estado === "activo").length;
+  
+  const hoy = new Date().toISOString().split('T')[0];
+  const turnosHoy = turnosData.filter((t: any) => t.fecha_creacion?.startsWith(hoy));
+  const turnosCompletadosHoy = turnosHoy.filter((t: any) => t.estado === "atendido").length;
+  const turnosEnEspera = turnosData.filter((t: any) => t.estado === "pendiente").length;
+  
+  const tiemposEspera = turnosHoy.filter((t: any) => t.tiempo_espera !== null).map((t: any) => t.tiempo_espera);
+  const tiempoPromedio = tiemposEspera.length > 0 ? Math.round(tiemposEspera.reduce((a: number, b: number) => a + b, 0) / tiemposEspera.length) : 0;
+
   const stats = [
     {
       title: "Kioskos Activos",
-      value: "12",
+      value: kioskosActivos.toString(),
       icon: Monitor,
-      description: "3 en mantenimiento"
+      description: `${kioskosMantenimiento} en mantenimiento`
     },
     {
       title: "Sucursales",
-      value: "8",
+      value: sucursalesActivas.toString(),
       icon: Building2,
-      description: "Todas operativas"
+      description: "Operativas"
     },
     {
       title: "Usuarios en Espera",
-      value: "47",
+      value: turnosEnEspera.toString(),
       icon: Users,
-      description: "Tiempo promedio: 15 min"
+      description: `Tiempo promedio: ${tiempoPromedio} min`
     },
     {
       title: "Turnos Hoy",
-      value: "234",
+      value: turnosHoy.length.toString(),
       icon: Clock,
-      description: "156 completados"
+      description: `${turnosCompletadosHoy} completados`
     }
   ];
 
@@ -64,12 +83,12 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { time: "10:45", action: "Kiosko K-003 reiniciado", location: "Sucursal Centro" },
-                { time: "10:32", action: "Nuevo usuario registrado", location: "Kiosko K-001" },
-                { time: "10:28", action: "Turno completado #A-234", location: "Sucursal Norte" },
-                { time: "10:15", action: "Pantalla P-005 actualizada", location: "Sucursal Sur" }
-              ].map((activity, index) => (
+              {turnosData.slice(0, 4).map((turno: any, index: number) => {
+                const fecha = new Date(turno.fecha_creacion);
+                const tiempo = fecha.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+                const estado = turno.estado === "atendido" ? "completado" : turno.estado;
+                return { time: tiempo, action: `Turno ${estado} #${turno.numero}`, location: turno.sucursal?.nombre || "Sin sucursal" };
+              }).map((activity, index) => (
                 <div key={index} className="flex items-center space-x-4 text-sm">
                   <span className="text-xs text-admin-text-muted w-12">{activity.time}</span>
                   <div className="flex-1">
