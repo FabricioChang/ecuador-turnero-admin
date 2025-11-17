@@ -163,14 +163,14 @@ const Categorias = () => {
                   <Tag className="h-4 w-4 text-admin-text-muted" />
                   <span className="text-sm text-admin-text-secondary">Prioridad:</span>
                 </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                  {categoria.sucursal}
+                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                  Media
                 </span>
               </div>
 
               <div className="flex items-center space-x-2">
                 <Clock className="h-4 w-4 text-admin-text-muted" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium text-admin-text-primary">{categoria.tiempoEsperaEstimado} min</p>
                   <p className="text-xs text-admin-text-muted">Tiempo estimado</p>
                 </div>
@@ -180,16 +180,16 @@ const Categorias = () => {
                 <div className="flex items-center space-x-2">
                   <Tag className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className="text-sm font-medium text-admin-text-primary">{categoria.descripcion}</p>
-                    <p className="text-xs text-admin-text-muted">Descripción</p>
+                    <p className="text-sm font-medium text-admin-text-primary">{categoria.sucursal}</p>
+                    <p className="text-xs text-admin-text-muted">Sucursal</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-admin-text-muted" />
                   <div>
-                    <p className="text-sm font-medium text-admin-text-primary">-</p>
-                    <p className="text-xs text-admin-text-muted">Turnos</p>
+                    <p className="text-sm font-medium text-admin-text-primary truncate">{categoria.descripcion}</p>
+                    <p className="text-xs text-admin-text-muted">Descripción</p>
                   </div>
                 </div>
               </div>
