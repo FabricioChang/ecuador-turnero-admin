@@ -151,9 +151,9 @@ const Turnos = () => {
 
   // Calcular KPIs
   const kpis = {
-    enEspera: turnos.filter(t => t.estado === 'espera').length,
+    enEspera: turnos.filter(t => t.estado === 'pendiente' || t.estado === 'en_atencion' || t.estado === 'espera').length,
     atendidos: turnos.filter(t => t.estado === 'atendido').length,
-    perdidos: turnos.filter(t => t.estado === 'perdido').length,
+    perdidos: turnos.filter(t => t.estado === 'cancelado' || t.estado === 'perdido').length,
     reagendados: turnos.filter(t => t.estado === 'reagendado').length
   };
 
@@ -193,19 +193,29 @@ const Turnos = () => {
 
   const getEstadoBadge = (estado: string) => {
     const variants = {
-      espera: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600" },
-      atendido: { variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
-      perdido: { variant: "destructive" as const, icon: XCircle, color: "text-red-600" },
-      reagendado: { variant: "outline" as const, icon: Calendar, color: "text-blue-600" }
+      pendiente: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600", label: "Pendiente" },
+      en_atencion: { variant: "default" as const, icon: RefreshCw, color: "text-blue-600", label: "En Atención" },
+      atendido: { variant: "default" as const, icon: CheckCircle, color: "text-green-600", label: "Atendido" },
+      cancelado: { variant: "destructive" as const, icon: XCircle, color: "text-red-600", label: "Cancelado" },
+      // Mantener compatibilidad con estados antiguos
+      espera: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600", label: "En Espera" },
+      perdido: { variant: "destructive" as const, icon: XCircle, color: "text-red-600", label: "Perdido" },
+      reagendado: { variant: "outline" as const, icon: Calendar, color: "text-blue-600", label: "Reagendado" }
     };
     
-    const config = variants[estado as keyof typeof variants];
+    const config = variants[estado as keyof typeof variants] || {
+      variant: "outline" as const,
+      icon: Clock,
+      color: "text-gray-600",
+      label: estado
+    };
+    
     const Icon = config.icon;
     
     return (
       <Badge variant={config.variant} className="flex items-center gap-1">
         <Icon className="h-3 w-3" />
-        {estado.charAt(0).toUpperCase() + estado.slice(1)}
+        {config.label}
       </Badge>
     );
   };
