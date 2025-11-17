@@ -9,6 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTurnos } from "@/hooks/useTurnos";
+import { useProvincias } from "@/hooks/useProvincias";
+import { useCantones } from "@/hooks/useCantones";
+import { useRegiones } from "@/hooks/useRegiones";
+import { useSucursales } from "@/hooks/useSucursales";
+import { useCategorias } from "@/hooks/useCategorias";
 import { 
   Clock, 
   CheckCircle, 
@@ -120,6 +125,12 @@ const mockTurnos: Turno[] = [
 
 const Turnos = () => {
   const { data: turnosDB = [], isLoading } = useTurnos();
+  const { regiones } = useRegiones();
+  const { data: provincias = [] } = useProvincias();
+  const { data: cantones = [] } = useCantones();
+  const { data: sucursales = [] } = useSucursales();
+  const { data: categorias = [] } = useCategorias();
+  
   const [busqueda, setBusqueda] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
   const [provinciaFilter, setProvinciaFilter] = useState("");

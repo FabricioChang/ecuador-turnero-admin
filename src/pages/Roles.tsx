@@ -13,6 +13,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useRolePermissions, useUpdateRolePermissions } from "@/hooks/useRolePermissions";
 import { useCustomRoles, useCreateCustomRole, useUpdateCustomRole, useDeleteCustomRole, useCustomRolePermissions, useUpdateCustomRolePermissions } from "@/hooks/useCustomRoles";
 import { Database } from "@/integrations/supabase/types";
+import { useToast } from "@/hooks/use-toast";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -31,6 +32,7 @@ const roleDescriptions: Record<AppRole, string> = {
 };
 
 const Roles = () => {
+  const { toast } = useToast();
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
   const [selectedRoleType, setSelectedRoleType] = useState<"system" | "custom">("system");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -162,6 +164,15 @@ const Roles = () => {
   };
 
   const handleDeleteRole = (roleId: string) => {
+    const role = customRoles.find(r => r.id === roleId);
+    if (role?.es_sistema) {
+      toast({
+        title: "No se puede eliminar",
+        description: "Los roles del sistema no pueden ser eliminados",
+        variant: "destructive",
+      });
+      return;
+    }
     if (confirm("¿Estás seguro de eliminar este rol?")) {
       deleteCustomRole.mutate(roleId);
     }
@@ -260,11 +271,11 @@ const Roles = () => {
                       )}
                       {!role.es_sistema && (
                         <>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); openEditDialog(role); }}>
-                            <Pencil className="h-3 w-3" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEditDialog(role); }}>
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); handleDeleteRole(role.id); }}>
-                            <Trash2 className="h-3 w-3 text-destructive" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDeleteRole(role.id); }}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </>
                       )}
