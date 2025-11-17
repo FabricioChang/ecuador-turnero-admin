@@ -152,7 +152,7 @@ export default function Usuarios() {
   const [provinciaFilter, setProvinciaFilter] = useState("");
   const [ciudadFilter, setCiudadFilter] = useState("");
   const [sucursalFilter, setSucursalFilter] = useState("");
-  const [codigoFilter, setCodigoFilter] = useState("");
+  const [rolFilter, setRolFilter] = useState("");
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState<Usuario | null>(null);
   const { toast } = useToast();
@@ -276,8 +276,8 @@ export default function Usuarios() {
       return false;
     }
     
-    // Filtro por código de usuario
-    if (codigoFilter && !usuario.codigo.includes(codigoFilter)) {
+    // Filtro por rol
+    if (rolFilter && rolFilter !== "all" && usuario.rol !== rolFilter) {
       return false;
     }
     
@@ -640,11 +640,19 @@ export default function Usuarios() {
               </SelectContent>
             </Select>
 
-            <Input
-              placeholder="Código de usuario..."
-              value={codigoFilter}
-              onChange={(e) => setCodigoFilter(e.target.value)}
-            />
+            <Select value={rolFilter} onValueChange={setRolFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los roles</SelectItem>
+                {rolesPosibles.map((rol) => (
+                  <SelectItem key={rol} value={rol}>
+                    {rol}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Button 
@@ -655,7 +663,7 @@ export default function Usuarios() {
               setProvinciaFilter("");
               setCiudadFilter("");
               setSucursalFilter("");
-              setCodigoFilter("");
+              setRolFilter("");
             }}
           >
             Limpiar Filtros
