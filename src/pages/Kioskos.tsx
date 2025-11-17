@@ -9,6 +9,7 @@ import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { useRegiones } from "@/hooks/useRegiones";
 import { useKioskos } from "@/hooks/useKioskos";
+import { useSucursales } from "@/hooks/useSucursales";
 
 const Kioskos = () => {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ const Kioskos = () => {
   const { data: provincias = [] } = useProvincias();
   const { data: cantones = [] } = useCantones();
   const { data: kioskosDB = [], isLoading } = useKioskos();
+  const { data: sucursales = [] } = useSucursales();
 
   const kioskos = kioskosDB.map((k: any) => ({
     id: k.id,
@@ -179,9 +181,11 @@ const Kioskos = () => {
               </SelectTrigger>
               <SelectContent className="bg-admin-surface border-admin-border-light">
                 <SelectItem value="all">Todas las sucursales</SelectItem>
-                <SelectItem value="Sucursal Centro">Sucursal Centro</SelectItem>
-                <SelectItem value="Sucursal Norte">Sucursal Norte</SelectItem>
-                <SelectItem value="Sucursal Sur">Sucursal Sur</SelectItem>
+                {sucursales.map((sucursal: any) => (
+                  <SelectItem key={sucursal.id} value={sucursal.nombre}>
+                    {sucursal.nombre}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

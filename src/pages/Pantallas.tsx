@@ -9,6 +9,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Layers3, Save, Search, Filter } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useProvincias } from "@/hooks/useProvincias";
+import { useCantones } from "@/hooks/useCantones";
+import { useRegiones } from "@/hooks/useRegiones";
+import { useSucursales } from "@/hooks/useSucursales";
+import { usePantallas } from "@/hooks/usePantallas";
 
 interface SucursalOption {
   id: number;
@@ -46,33 +51,15 @@ const Pantallas = () => {
   const [ciudadFilter, setCiudadFilter] = useState("");
   const [sucursalFilter, setSucursalFilter] = useState("");
 
-  const regiones = {
-    costa: ["Esmeraldas", "Manabí", "Los Ríos", "Guayas", "Santa Elena", "El Oro"],
-    sierra: ["Carchi", "Imbabura", "Pichincha", "Cotopaxi", "Tungurahua", "Bolívar", "Chimborazo", "Cañar", "Azuay", "Loja"],
-    amazonia: ["Sucumbíos", "Napo", "Orellana", "Pastaza", "Morona Santiago", "Zamora Chinchipe"],
-    galapagos: ["Galápagos"]
-  };
-
-  const ciudades = {
-    "Pichincha": ["Quito", "Cayambe", "Mejía", "Pedro Moncayo", "Rumiñahui"],
-    "Guayas": ["Guayaquil", "Durán", "Samborondón", "Daule", "Milagro"],
-    "Azuay": ["Cuenca", "Gualaceo", "Paute", "Chordeleg", "Sigsig"]
-  };
+  const { regiones } = useRegiones();
+  const { data: provincias = [] } = useProvincias();
+  const { data: cantones = [] } = useCantones();
+  const { data: sucursalesDB = [] } = useSucursales();
+  const { data: pantallasDB = [], isLoading } = usePantallas();
 
   useEffect(() => {
     document.title = "Pantallas | Panel Admin";
   }, []);
-
-  const sucursales: SucursalOption[] = useMemo(
-    () => [
-      { id: 1, nombre: "Sucursal Centro", region: "sierra", provincia: "Pichincha", ciudad: "Quito" },
-      { id: 2, nombre: "Sucursal Norte", region: "sierra", provincia: "Pichincha", ciudad: "Quito" },
-      { id: 3, nombre: "Sucursal Sur", region: "costa", provincia: "Guayas", ciudad: "Guayaquil" },
-      { id: 4, nombre: "Sucursal Guayaquil Centro", region: "costa", provincia: "Guayas", ciudad: "Guayaquil" },
-      { id: 5, nombre: "Sucursal Cuenca", region: "sierra", provincia: "Azuay", ciudad: "Cuenca" },
-    ],
-    []
-  );
 
   const publicidadCatalogo: PublicidadItem[] = useMemo(
     () => [
@@ -124,12 +111,24 @@ const Pantallas = () => {
     toast({ title: "Publicidad actualizada", description: "Se guardó la asignación de contenidos." });
   };
 
-  const actualizarSucursal = (idPantalla: number, sucursalId: number) => {
-    const suc = sucursales.find((s) => s.id === Number(sucursalId));
+  const actualizarSucursal = (idPantalla: number, sucursalId: string) => {
+    const suc = sucursalesDB.find((s: any) => s.id === sucursalId);
     if (!suc) return;
-    setPantallas((prev) => prev.map((p) => (p.id === idPantalla ? { ...p, sucursalId: suc.id, sucursalNombre: suc.nombre, region: suc.region, provincia: suc.provincia, ciudad: suc.ciudad } : p)));
+    setPantallas((prev) => prev.map((p) => (p.id === idPantalla ? { ...p, sucursalId: suc.id, sucursalNombre: suc.nombre, region: suc.provincia?.nombre || '', provincia: suc.provincia?.nombre || '', ciudad: suc.canton?.nombre || '' } : p)));
     toast({ title: "Sucursal asignada", description: `La pantalla ahora apunta a: ${suc.nombre}` });
   };
+
+  const provinciasFiltradas = useMemo(() => {
+    if (!regionFilter) return provincias;
+    const regionSeleccionada = regiones.find((r: any) => r.id === regionFilter);
+    return provincias.filter((p: any) => regionSeleccionada?.provincias.includes(p.nombre));
+  }, [regionFilter, provincias, regiones]);
+
+  const cantonesFiltrados = useMemo(() => {
+    if (!provinciaFilter) return cantones;
+    const provinciaSeleccionada = provincias.find((p: any) => p.nombre === provinciaFilter);
+    return cantones.filter((c: any) => c.provincia_id === provinciaSeleccionada?.id);
+  }, [provinciaFilter, cantones, provincias]);
 
   const handleRegionChange = (value: string) => {
     setRegionFilter(value);
@@ -205,8 +204,8 @@ const Pantallas = () => {
               </SelectTrigger>
               <SelectContent className="bg-admin-surface border-admin-border-light">
                 <SelectItem value="all">Todas las provincias</SelectItem>
-                {regionFilter && regionFilter !== "all" && regiones[regionFilter as keyof typeof regiones].map(prov => (
-                  <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                {provinciasFiltradas.map((prov: any) => (
+                  <SelectItem key={prov.id} value={prov.nombre}>{prov.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -221,8 +220,8 @@ const Pantallas = () => {
               </SelectTrigger>
               <SelectContent className="bg-admin-surface border-admin-border-light">
                 <SelectItem value="all">Todas las ciudades</SelectItem>
-                {provinciaFilter && provinciaFilter !== "all" && ciudades[provinciaFilter as keyof typeof ciudades]?.map(ciudad => (
-                  <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
+                {cantonesFiltrados.map((canton: any) => (
+                  <SelectItem key={canton.id} value={canton.nombre}>{canton.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -233,7 +232,7 @@ const Pantallas = () => {
               </SelectTrigger>
               <SelectContent className="bg-admin-surface border-admin-border-light">
                 <SelectItem value="all">Todas las sucursales</SelectItem>
-                {sucursales.map((s) => (
+                {sucursalesDB.map((s: any) => (
                   <SelectItem key={s.id} value={s.nombre}>{s.nombre}</SelectItem>
                 ))}
               </SelectContent>
@@ -260,15 +259,15 @@ const Pantallas = () => {
               <TableCell className="font-medium text-admin-text-primary">{p.nombre}</TableCell>
               <TableCell>
                 <Select
-                  value={String(p.sucursalId ?? "")}
-                  onValueChange={(val) => actualizarSucursal(p.id, Number(val))}
+                  value={p.sucursalId ? String(p.sucursalId) : ""}
+                  onValueChange={(val) => actualizarSucursal(p.id, val)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione sucursal" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sucursales.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
+                    {sucursalesDB.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id}>
                         {s.nombre}
                       </SelectItem>
                     ))}
