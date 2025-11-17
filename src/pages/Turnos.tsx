@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -104,6 +105,12 @@ const mockTurnos: Turno[] = [
 const Turnos = () => {
   const [turnos, setTurnos] = useState<Turno[]>(mockTurnos);
   const [busqueda, setBusqueda] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [provinciaFilter, setProvinciaFilter] = useState("");
+  const [ciudadFilter, setCiudadFilter] = useState("");
+  const [sucursalFilter, setSucursalFilter] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("");
+  const [categoriaFilter, setCategoriaFilter] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
   const [modalDetalle, setModalDetalle] = useState(false);
   const { toast } = useToast();

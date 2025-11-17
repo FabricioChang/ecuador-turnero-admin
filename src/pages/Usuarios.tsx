@@ -1,4 +1,3 @@
-import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,7 +40,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Search, Filter } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Tipos
 interface Usuario {
@@ -147,6 +147,12 @@ const initialData: Usuario[] = [
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>(initialData);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
+  const [provinciaFilter, setProvinciaFilter] = useState("");
+  const [ciudadFilter, setCiudadFilter] = useState("");
+  const [sucursalFilter, setSucursalFilter] = useState("");
+  const [codigoFilter, setCodigoFilter] = useState("");
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState<Usuario | null>(null);
   const { toast } = useToast();
