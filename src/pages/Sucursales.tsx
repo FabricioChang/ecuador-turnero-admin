@@ -48,8 +48,6 @@ const Sucursales = () => {
     estado: suc.estado,
     provincia: suc.provincia?.nombre || "",
     ciudad: suc.canton?.nombre || "",
-    telefono: suc.telefono,
-    email: suc.email
   }));
 
   const handleRegionChange = (value: string) => {
@@ -256,16 +254,16 @@ const Sucursales = () => {
                 <div className="flex items-center space-x-2 min-w-0">
                   <Monitor className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-admin-text-primary truncate">{sucursal.telefono || 'N/A'}</p>
-                    <p className="text-xs text-admin-text-muted">Teléfono</p>
+                    <p className="text-sm font-medium text-admin-text-primary">Kioskos</p>
+                    <p className="text-xs text-admin-text-muted">0 activos</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2 min-w-0">
                   <Users className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-admin-text-primary truncate" title={sucursal.email || 'N/A'}>{sucursal.email || 'N/A'}</p>
-                    <p className="text-xs text-admin-text-muted">Email</p>
+                    <p className="text-sm font-medium text-admin-text-primary">{sucursal.ciudad}</p>
+                    <p className="text-xs text-admin-text-muted">Ciudad</p>
                   </div>
                 </div>
               </div>
