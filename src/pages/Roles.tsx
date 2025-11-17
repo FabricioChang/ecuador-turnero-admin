@@ -3,11 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Save, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Shield, Save, CheckCircle2, Plus, Pencil, Trash2 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useRolePermissions, useUpdateRolePermissions } from "@/hooks/useRolePermissions";
+import { useCustomRoles, useCreateCustomRole, useUpdateCustomRole, useDeleteCustomRole, useCustomRolePermissions, useUpdateCustomRolePermissions } from "@/hooks/useCustomRoles";
 import { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -27,14 +31,37 @@ const roleDescriptions: Record<AppRole, string> = {
 };
 
 const Roles = () => {
-  const [selectedRole, setSelectedRole] = useState<AppRole>("admin");
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
+  const [selectedRoleType, setSelectedRoleType] = useState<"system" | "custom">("system");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDescription, setNewRoleDescription] = useState("");
+  const [editRoleId, setEditRoleId] = useState("");
+  const [editRoleName, setEditRoleName] = useState("");
+  const [editRoleDescription, setEditRoleDescription] = useState("");
 
   const { data: permissions = [], isLoading: loadingPermissions } = usePermissions();
-  const { data: rolePermissions = [], isLoading: loadingRolePermissions } = useRolePermissions(selectedRole);
-  const updateRolePermissions = useUpdateRolePermissions();
+  const { data: customRoles = [], isLoading: loadingCustomRoles } = useCustomRoles();
+  
+  // Get system role permissions or custom role permissions based on selection
+  const systemRolePermissions = useRolePermissions(selectedRoleType === "system" ? selectedRoleId as AppRole : undefined);
+  const customRolePermissions = useCustomRolePermissions(selectedRoleType === "custom" ? selectedRoleId : undefined);
+  
+  const rolePermissions = selectedRoleType === "system" 
+    ? (systemRolePermissions.data || [])
+    : (customRolePermissions.data || []);
+  
+  const updateSystemRolePermissions = useUpdateRolePermissions();
+  const updateCustomRolePermissions = useUpdateCustomRolePermissions();
+  const createCustomRole = useCreateCustomRole();
+  const updateCustomRole = useUpdateCustomRole();
+  const deleteCustomRole = useDeleteCustomRole();
 
   const permissionsByCategory = useMemo(() => {
     const grouped: Record<string, typeof permissions> = {};
@@ -48,13 +75,31 @@ const Roles = () => {
   const categories = Object.keys(permissionsByCategory).sort();
 
   useEffect(() => {
-    const permissionIds = new Set(rolePermissions.map((rp) => rp.permission_id));
+    const permissionIds = new Set(rolePermissions.map((rp: any) => rp.permission_id));
     setSelectedPermissions(permissionIds);
     setHasChanges(false);
   }, [rolePermissions]);
 
+  // Set default role on load
+  useEffect(() => {
+    if (customRoles.length > 0 && !selectedRoleId) {
+      const adminRole = customRoles.find(r => r.nombre === "admin");
+      if (adminRole) {
+        setSelectedRoleId(adminRole.nombre);
+        setSelectedRoleType("system");
+      }
+    }
+  }, [customRoles, selectedRoleId]);
+
   const categoryPermissions = selectedCategory ? permissionsByCategory[selectedCategory] || [] : [];
   const allPermissionsSelected = permissions.length > 0 && selectedPermissions.size === permissions.length;
+
+  const handleSelectRole = (roleId: string, isSystem: boolean) => {
+    setSelectedRoleId(roleId);
+    setSelectedRoleType(isSystem ? "system" : "custom");
+    setSelectedCategory("");
+    setHasChanges(false);
+  };
 
   const handleTogglePermission = (permissionId: string) => {
     const newSelected = new Set(selectedPermissions);
@@ -70,8 +115,63 @@ const Roles = () => {
   };
 
   const handleSavePermissions = () => {
-    updateRolePermissions.mutate({ role: selectedRole, permissionIds: Array.from(selectedPermissions) });
+    const permissionIds = Array.from(selectedPermissions);
+    
+    if (selectedRoleType === "system") {
+      updateSystemRolePermissions.mutate({ 
+        role: selectedRoleId as AppRole, 
+        permissionIds 
+      });
+    } else {
+      updateCustomRolePermissions.mutate({ 
+        roleId: selectedRoleId, 
+        permissionIds 
+      });
+    }
     setHasChanges(false);
+  };
+
+  const handleCreateRole = () => {
+    createCustomRole.mutate({
+      nombre: newRoleName,
+      descripcion: newRoleDescription,
+      permissionIds: Array.from(selectedPermissions),
+    }, {
+      onSuccess: () => {
+        setIsCreateDialogOpen(false);
+        setNewRoleName("");
+        setNewRoleDescription("");
+        setSelectedPermissions(new Set());
+      }
+    });
+  };
+
+  const handleUpdateRole = () => {
+    updateCustomRole.mutate({
+      roleId: editRoleId,
+      nombre: editRoleName,
+      descripcion: editRoleDescription,
+    }, {
+      onSuccess: () => {
+        setIsEditDialogOpen(false);
+        setEditRoleId("");
+        setEditRoleName("");
+        setEditRoleDescription("");
+      }
+    });
+  };
+
+  const handleDeleteRole = (roleId: string) => {
+    if (confirm("¿Estás seguro de eliminar este rol?")) {
+      deleteCustomRole.mutate(roleId);
+    }
+  };
+
+  const openEditDialog = (role: any) => {
+    setEditRoleId(role.id);
+    setEditRoleName(role.nombre);
+    setEditRoleDescription(role.descripcion || "");
+    setIsEditDialogOpen(true);
   };
 
   const getCategoryPermissionCount = (category: string) => {
@@ -80,9 +180,11 @@ const Roles = () => {
     return `${selectedCount}/${categoryPerms.length}`;
   };
 
-  if (loadingPermissions || loadingRolePermissions) {
+  if (loadingPermissions || loadingCustomRoles) {
     return <div className="flex items-center justify-center min-h-screen"><p className="text-admin-text-muted">Cargando...</p></div>;
   }
+
+  const selectedRole = customRoles.find(r => r.nombre === selectedRoleId || r.id === selectedRoleId);
 
   return (
     <div className="space-y-6 p-6">
@@ -93,25 +195,84 @@ const Roles = () => {
           </h1>
           <p className="text-admin-text-secondary mt-1">Administra los permisos y accesos de cada rol</p>
         </div>
-        {hasChanges && (
-          <Button onClick={handleSavePermissions} disabled={updateRolePermissions.isPending}>
-            <Save className="h-4 w-4 mr-2" />Guardar Cambios
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {hasChanges && (
+            <Button onClick={handleSavePermissions} disabled={updateSystemRolePermissions.isPending || updateCustomRolePermissions.isPending}>
+              <Save className="h-4 w-4 mr-2" />Guardar Cambios
+            </Button>
+          )}
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Plus className="h-4 w-4 mr-2" />Nuevo Rol
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Crear Nuevo Rol</DialogTitle>
+                <DialogDescription>Crea un rol personalizado con permisos específicos</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Nombre del Rol</Label>
+                  <Input value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} placeholder="ej: Gerente de Ventas" />
+                </div>
+                <div>
+                  <Label>Descripción</Label>
+                  <Textarea value={newRoleDescription} onChange={(e) => setNewRoleDescription(e.target.value)} placeholder="Describe las responsabilidades de este rol" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleCreateRole} disabled={!newRoleName || createCustomRole.isPending}>Crear Rol</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
+      {/* Selector de Rol */}
       <Card className="bg-admin-surface border-admin-border-light">
-        <CardHeader><CardTitle className="text-lg">Seleccionar Rol</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Seleccionar Rol</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {(["admin", "supervisor", "operador", "usuario"] as AppRole[]).map((role) => (
-              <Card key={role} className={`cursor-pointer transition-all ${selectedRole === role ? "border-primary bg-primary/5" : "border-admin-border-light hover:border-admin-border-dark"}`} onClick={() => { setSelectedRole(role); setSelectedCategory(""); setHasChanges(false); }}>
+            {customRoles.map((role) => (
+              <Card
+                key={role.id}
+                className={`cursor-pointer transition-all ${
+                  selectedRoleId === (role.es_sistema ? role.nombre : role.id)
+                    ? "border-primary bg-primary/5"
+                    : "border-admin-border-light hover:border-admin-border-dark"
+                }`}
+                onClick={() => handleSelectRole(role.es_sistema ? role.nombre : role.id, role.es_sistema)}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">{roleLabels[role]}</h3>
-                    {selectedRole === role && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{role.es_sistema ? roleLabels[role.nombre as AppRole] || role.nombre : role.nombre}</h3>
+                      {role.es_sistema && <Badge variant="secondary" className="text-xs">Sistema</Badge>}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {selectedRoleId === (role.es_sistema ? role.nombre : role.id) && (
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      )}
+                      {!role.es_sistema && (
+                        <>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); openEditDialog(role); }}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); handleDeleteRole(role.id); }}>
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm text-admin-text-muted">{roleDescriptions[role]}</p>
+                  <p className="text-sm text-admin-text-muted">
+                    {role.es_sistema ? roleDescriptions[role.nombre as AppRole] : role.descripcion}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -119,15 +280,19 @@ const Roles = () => {
         </CardContent>
       </Card>
 
+      {/* Checkbox para otorgar todos los permisos */}
       <Card className="bg-admin-surface border-admin-border-light">
         <CardContent className="p-6">
           <div className="flex items-center space-x-3">
             <Checkbox id="all-permissions" checked={allPermissionsSelected} onCheckedChange={handleToggleAll} />
-            <Label htmlFor="all-permissions" className="text-base font-semibold cursor-pointer">Otorgar todos los permisos</Label>
+            <Label htmlFor="all-permissions" className="text-base font-semibold cursor-pointer">
+              Otorgar todos los permisos
+            </Label>
           </div>
         </CardContent>
       </Card>
 
+      {/* Tabla de Permisos por Categoría */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <Card className="bg-admin-surface border-admin-border-light lg:col-span-1 h-fit">
           <CardHeader><CardTitle>Categorías</CardTitle></CardHeader>
@@ -142,7 +307,11 @@ const Roles = () => {
         </Card>
 
         <Card className="bg-admin-surface border-admin-border-light lg:col-span-3">
-          <CardHeader><CardTitle>{selectedCategory ? `Permisos de ${selectedCategory}` : "Selecciona una categoría"}</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>
+              {selectedCategory ? `Permisos de ${selectedCategory}` : "Selecciona una categoría"}
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             {selectedCategory ? (
               <Table>
@@ -161,6 +330,30 @@ const Roles = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog de edición */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Rol</DialogTitle>
+            <DialogDescription>Modifica el nombre y descripción del rol</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nombre del Rol</Label>
+              <Input value={editRoleName} onChange={(e) => setEditRoleName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Descripción</Label>
+              <Textarea value={editRoleDescription} onChange={(e) => setEditRoleDescription(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdateRole} disabled={!editRoleName || updateCustomRole.isPending}>Actualizar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
