@@ -207,30 +207,60 @@ export type Database = {
       }
       profiles: {
         Row: {
+          apellidos: string
+          canton_id: string | null
+          cedula: string | null
           created_at: string
+          direccion: string | null
           email: string
           id: string
-          nombre: string
+          nombres: string
+          provincia_id: string | null
           telefono: string | null
           updated_at: string
         }
         Insert: {
+          apellidos?: string
+          canton_id?: string | null
+          cedula?: string | null
           created_at?: string
+          direccion?: string | null
           email: string
           id: string
-          nombre: string
+          nombres?: string
+          provincia_id?: string | null
           telefono?: string | null
           updated_at?: string
         }
         Update: {
+          apellidos?: string
+          canton_id?: string | null
+          cedula?: string | null
           created_at?: string
+          direccion?: string | null
           email?: string
           id?: string
-          nombre?: string
+          nombres?: string
+          provincia_id?: string | null
           telefono?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_canton_id_fkey"
+            columns: ["canton_id"]
+            isOneToOne: false
+            referencedRelation: "cantones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_provincia_id_fkey"
+            columns: ["provincia_id"]
+            isOneToOne: false
+            referencedRelation: "provincias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       provincias: {
         Row: {
