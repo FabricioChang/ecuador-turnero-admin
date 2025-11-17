@@ -14,6 +14,7 @@ import { useCantones } from "@/hooks/useCantones";
 import { useRegiones } from "@/hooks/useRegiones";
 import { useSucursales } from "@/hooks/useSucursales";
 import { usePantallas } from "@/hooks/usePantallas";
+import { usePublicidad } from "@/hooks/usePublicidad";
 
 interface SucursalOption {
   id: number;
@@ -56,21 +57,18 @@ const Pantallas = () => {
   const { data: cantones = [] } = useCantones();
   const { data: sucursalesDB = [] } = useSucursales();
   const { data: pantallasDB = [], isLoading } = usePantallas();
+  const { data: publicidadDB = [] } = usePublicidad();
 
   useEffect(() => {
     document.title = "Pantallas | Panel Admin";
   }, []);
 
-  const publicidadCatalogo: PublicidadItem[] = useMemo(
-    () => [
-      { id: 101, nombre: "Promo 2x1" },
-      { id: 102, nombre: "Descuento Fin de Semana" },
-      { id: 103, nombre: "Nuevos Servicios" },
-      { id: 104, nombre: "Tarifas Actualizadas" },
-      { id: 105, nombre: "Campaña Temporada" },
-    ],
-    []
-  );
+  // Filtros para el modal de publicidad
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
+  const [modalRegionFilter, setModalRegionFilter] = useState("");
+  const [modalProvinciaFilter, setModalProvinciaFilter] = useState("");
+  const [modalCiudadFilter, setModalCiudadFilter] = useState("");
+  const [modalSucursalFilter, setModalSucursalFilter] = useState("");
 
   const [pantallas, setPantallas] = useState<Pantalla[]>([
     { id: 9001, identificador: "PAN-9001", nombre: "Pantalla Recepción", sucursalId: 1, sucursalNombre: "Sucursal Centro", publicidadIds: [101, 103], region: "sierra", provincia: "Pichincha", ciudad: "Quito" },
@@ -96,6 +94,12 @@ const Pantallas = () => {
   const abrirDialogoAds = (p: Pantalla) => {
     setTempAds(p.publicidadIds);
     setDialogOpenFor(p.id);
+    // Reset filtros del modal
+    setModalSearchTerm("");
+    setModalRegionFilter("");
+    setModalProvinciaFilter("");
+    setModalCiudadFilter("");
+    setModalSucursalFilter("");
   };
 
   const toggleAd = (id: number) => {
@@ -140,6 +144,36 @@ const Pantallas = () => {
     setProvinciaFilter(value);
     setCiudadFilter("");
   };
+
+  const handleModalRegionChange = (value: string) => {
+    setModalRegionFilter(value);
+    setModalProvinciaFilter("");
+    setModalCiudadFilter("");
+  };
+
+  const handleModalProvinciaChange = (value: string) => {
+    setModalProvinciaFilter(value);
+    setModalCiudadFilter("");
+  };
+
+  const provinciasFiltradas2 = useMemo(() => {
+    if (!modalRegionFilter) return provincias;
+    const regionSeleccionada = regiones.find((r: any) => r.id === modalRegionFilter);
+    return provincias.filter((p: any) => regionSeleccionada?.provincias.includes(p.nombre));
+  }, [modalRegionFilter, provincias, regiones]);
+
+  const cantonesFiltrados2 = useMemo(() => {
+    if (!modalProvinciaFilter) return cantones;
+    const provinciaSeleccionada = provincias.find((p: any) => p.nombre === modalProvinciaFilter);
+    return cantones.filter((c: any) => c.provincia_id === provinciaSeleccionada?.id);
+  }, [modalProvinciaFilter, cantones, provincias]);
+
+  const filteredPublicidad = useMemo(() => {
+    return publicidadDB.filter(item => {
+      const matchesSearch = item.nombre.toLowerCase().includes(modalSearchTerm.toLowerCase());
+      return matchesSearch;
+    });
+  }, [publicidadDB, modalSearchTerm]);
 
   const filteredPantallas = pantallas.filter(pantalla => {
     const matchesSearch = pantalla.identificador.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -285,23 +319,43 @@ const Pantallas = () => {
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">Asignar publicidad</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
                     <DialogHeader>
                       <DialogTitle>Asignar publicidad</DialogTitle>
                       <DialogDescription>Seleccione el contenido a mostrar en "{p.nombre}"</DialogDescription>
                     </DialogHeader>
 
-                    <div className="max-h-64 overflow-auto space-y-2 pr-1">
-                      {publicidadCatalogo.map((item) => (
-                        <label key={item.id} className="flex items-center gap-3">
-                          <Checkbox
-                            checked={tempAds.includes(item.id)}
-                            onCheckedChange={() => toggleAd(item.id)}
-                            aria-label={`Seleccionar ${item.nombre}`}
-                          />
-                          <span className="text-admin-text-primary">{item.nombre}</span>
-                        </label>
-                      ))}
+                    {/* Filtros del modal */}
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-admin-text-muted h-4 w-4" />
+                        <Input
+                          placeholder="Buscar por nombre..."
+                          value={modalSearchTerm}
+                          onChange={(e) => setModalSearchTerm(e.target.value)}
+                          className="pl-10 bg-admin-bg border-admin-border-light text-admin-text-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="max-h-64 overflow-auto space-y-2 pr-1 mt-4">
+                      {filteredPublicidad.length === 0 ? (
+                        <p className="text-center text-admin-text-secondary py-4">No se encontraron resultados</p>
+                      ) : (
+                        filteredPublicidad.map((item) => (
+                          <label key={item.id} className="flex items-center gap-3 p-2 hover:bg-admin-surface rounded cursor-pointer">
+                            <Checkbox
+                              checked={tempAds.includes(Number(item.id))}
+                              onCheckedChange={() => toggleAd(Number(item.id))}
+                              aria-label={`Seleccionar ${item.nombre}`}
+                            />
+                            <div className="flex-1">
+                              <span className="text-admin-text-primary font-medium">{item.nombre}</span>
+                              <span className="text-xs text-admin-text-secondary ml-2">({item.tipo})</span>
+                            </div>
+                          </label>
+                        ))
+                      )}
                     </div>
 
                     <DialogFooter className="gap-2 sm:gap-0">
