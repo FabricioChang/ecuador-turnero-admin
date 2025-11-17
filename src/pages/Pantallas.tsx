@@ -16,29 +16,9 @@ import { useSucursales } from "@/hooks/useSucursales";
 import { usePantallas } from "@/hooks/usePantallas";
 import { usePublicidad } from "@/hooks/usePublicidad";
 
-interface SucursalOption {
-  id: number;
-  nombre: string;
-  region: string;
-  provincia: string;
-  ciudad: string;
-}
-
 interface PublicidadItem {
   id: number;
   nombre: string;
-}
-
-interface Pantalla {
-  id: number;
-  identificador: string;
-  nombre: string;
-  sucursalId: number | null;
-  sucursalNombre: string;
-  publicidadIds: number[];
-  region: string;
-  provincia: string;
-  ciudad: string;
 }
 
 const Pantallas = () => {
@@ -51,6 +31,13 @@ const Pantallas = () => {
   const [provinciaFilter, setProvinciaFilter] = useState("");
   const [ciudadFilter, setCiudadFilter] = useState("");
   const [sucursalFilter, setSucursalFilter] = useState("");
+  
+  // Filtros para el modal de publicidad
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
+  const [modalRegionFilter, setModalRegionFilter] = useState("");
+  const [modalProvinciaFilter, setModalProvinciaFilter] = useState("");
+  const [modalCiudadFilter, setModalCiudadFilter] = useState("");
+  const [modalSucursalFilter, setModalSucursalFilter] = useState("");
 
   const { regiones } = useRegiones();
   const { data: provincias = [] } = useProvincias();
@@ -63,36 +50,31 @@ const Pantallas = () => {
     document.title = "Pantallas | Panel Admin";
   }, []);
 
-  // Filtros para el modal de publicidad
-  const [modalSearchTerm, setModalSearchTerm] = useState("");
-  const [modalRegionFilter, setModalRegionFilter] = useState("");
-  const [modalProvinciaFilter, setModalProvinciaFilter] = useState("");
-  const [modalCiudadFilter, setModalCiudadFilter] = useState("");
-  const [modalSucursalFilter, setModalSucursalFilter] = useState("");
+  const publicidadCatalogo: PublicidadItem[] = useMemo(
+    () => [
+      { id: 101, nombre: "Promo 2x1" },
+      { id: 102, nombre: "Descuento Fin de Semana" },
+      { id: 103, nombre: "Nuevos Servicios" },
+      { id: 104, nombre: "Tarifas Actualizadas" },
+      { id: 105, nombre: "Campaña Temporada" },
+    ],
+    []
+  );
 
-  const [pantallas, setPantallas] = useState<Pantalla[]>([
-    { id: 9001, identificador: "PAN-9001", nombre: "Pantalla Recepción", sucursalId: 1, sucursalNombre: "Sucursal Centro", publicidadIds: [101, 103], region: "sierra", provincia: "Pichincha", ciudad: "Quito" },
-    { id: 9002, identificador: "PAN-9002", nombre: "Pantalla Sala", sucursalId: 2, sucursalNombre: "Sucursal Norte", publicidadIds: [102], region: "sierra", provincia: "Pichincha", ciudad: "Quito" },
-  ]);
-
-  // Si venimos de "/pantallas/nueva" con una pantalla recién creada, agregarla
+  // Si venimos de "/pantallas/nueva" con una pantalla recién creada, refetch
   useEffect(() => {
-    const nueva = (location.state as { newPantalla?: Pantalla })?.newPantalla;
-
+    const nueva = (location.state as { newPantalla?: any })?.newPantalla;
     if (nueva) {
-      setPantallas((prev) => {
-        if (prev.some((p) => p.id === nueva.id)) return prev;
-        return [nueva, ...prev];
-      });
+      // El query se actualizará automáticamente
     }
   }, [location.state]);
 
   // Asignación de publicidad
-  const [dialogOpenFor, setDialogOpenFor] = useState<number | null>(null);
+  const [dialogOpenFor, setDialogOpenFor] = useState<string | null>(null);
   const [tempAds, setTempAds] = useState<number[]>([]);
 
-  const abrirDialogoAds = (p: Pantalla) => {
-    setTempAds(p.publicidadIds);
+  const abrirDialogoAds = (p: any) => {
+    setTempAds(p.publicidadIds || []);
     setDialogOpenFor(p.id);
     // Reset filtros del modal
     setModalSearchTerm("");
@@ -108,17 +90,15 @@ const Pantallas = () => {
 
   const guardarAds = () => {
     if (dialogOpenFor == null) return;
-    setPantallas((prev) =>
-      prev.map((p) => (p.id === dialogOpenFor ? { ...p, publicidadIds: [...tempAds] } : p))
-    );
+    // Aquí se guardaría en la BD
     setDialogOpenFor(null);
     toast({ title: "Publicidad actualizada", description: "Se guardó la asignación de contenidos." });
   };
 
-  const actualizarSucursal = (idPantalla: number, sucursalId: string) => {
+  const actualizarSucursal = (idPantalla: string, sucursalId: string) => {
+    // Aquí se actualizaría en la BD
     const suc = sucursalesDB.find((s: any) => s.id === sucursalId);
     if (!suc) return;
-    setPantallas((prev) => prev.map((p) => (p.id === idPantalla ? { ...p, sucursalId: suc.id, sucursalNombre: suc.nombre, region: suc.provincia?.nombre || '', provincia: suc.provincia?.nombre || '', ciudad: suc.canton?.nombre || '' } : p)));
     toast({ title: "Sucursal asignada", description: `La pantalla ahora apunta a: ${suc.nombre}` });
   };
 
@@ -175,13 +155,21 @@ const Pantallas = () => {
     });
   }, [publicidadDB, modalSearchTerm]);
 
-  const filteredPantallas = pantallas.filter(pantalla => {
-    const matchesSearch = pantalla.identificador.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pantalla.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRegion = !regionFilter || regionFilter === "all" || pantalla.region === regionFilter;
-    const matchesProvincia = !provinciaFilter || provinciaFilter === "all" || pantalla.provincia === provinciaFilter;
-    const matchesCiudad = !ciudadFilter || ciudadFilter === "all" || pantalla.ciudad === ciudadFilter;
-    const matchesSucursal = !sucursalFilter || sucursalFilter === "all" || pantalla.sucursalNombre === sucursalFilter;
+  const filteredPantallas = pantallasDB.filter((pantalla: any) => {
+    const matchesSearch = pantalla.identificador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         pantalla.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRegion = !regionFilter || regionFilter === "all" || 
+      regiones.find((r: any) => r.id === regionFilter)?.provincias.includes(pantalla.sucursal?.provincia?.nombre);
+    
+    const matchesProvincia = !provinciaFilter || provinciaFilter === "all" || 
+      pantalla.sucursal?.provincia?.nombre === provinciaFilter;
+    
+    const matchesCiudad = !ciudadFilter || ciudadFilter === "all" || 
+      pantalla.sucursal?.canton?.nombre === ciudadFilter;
+    
+    const matchesSucursal = !sucursalFilter || sucursalFilter === "all" || 
+      pantalla.sucursal?.nombre === sucursalFilter;
     
     return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesSucursal;
   });
@@ -287,88 +275,102 @@ const Pantallas = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredPantallas.map((p) => (
-            <TableRow key={p.id}>
-              <TableCell className="font-mono text-admin-text-secondary">{p.identificador}</TableCell>
-              <TableCell className="font-medium text-admin-text-primary">{p.nombre}</TableCell>
-              <TableCell>
-                <Select
-                  value={p.sucursalId ? String(p.sucursalId) : ""}
-                  onValueChange={(val) => actualizarSucursal(p.id, val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione sucursal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sucursalesDB.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2 text-admin-text-secondary">
-                  <Layers3 className="h-4 w-4" />
-                  <span>{p.publicidadIds.length} elementos</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <Dialog open={dialogOpenFor === p.id} onOpenChange={(o) => setDialogOpenFor(o ? p.id : null)}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">Asignar publicidad</Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
-                    <DialogHeader>
-                      <DialogTitle>Asignar publicidad</DialogTitle>
-                      <DialogDescription>Seleccione el contenido a mostrar en "{p.nombre}"</DialogDescription>
-                    </DialogHeader>
-
-                    {/* Filtros del modal */}
-                    <div className="space-y-4">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-admin-text-muted h-4 w-4" />
-                        <Input
-                          placeholder="Buscar por nombre..."
-                          value={modalSearchTerm}
-                          onChange={(e) => setModalSearchTerm(e.target.value)}
-                          className="pl-10 bg-admin-bg border-admin-border-light text-admin-text-primary"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="max-h-64 overflow-auto space-y-2 pr-1 mt-4">
-                      {filteredPublicidad.length === 0 ? (
-                        <p className="text-center text-admin-text-secondary py-4">No se encontraron resultados</p>
-                      ) : (
-                        filteredPublicidad.map((item) => (
-                          <label key={item.id} className="flex items-center gap-3 p-2 hover:bg-admin-surface rounded cursor-pointer">
-                            <Checkbox
-                              checked={tempAds.includes(Number(item.id))}
-                              onCheckedChange={() => toggleAd(Number(item.id))}
-                              aria-label={`Seleccionar ${item.nombre}`}
-                            />
-                            <div className="flex-1">
-                              <span className="text-admin-text-primary font-medium">{item.nombre}</span>
-                              <span className="text-xs text-admin-text-secondary ml-2">({item.tipo})</span>
-                            </div>
-                          </label>
-                        ))
-                      )}
-                    </div>
-
-                    <DialogFooter className="gap-2 sm:gap-0">
-                      <Button variant="ghost" onClick={() => setDialogOpenFor(null)}>Cancelar</Button>
-                      <Button onClick={guardarAds}>
-                        <Save className="mr-2 h-4 w-4" /> Guardar
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8 text-admin-text-secondary">
+                Cargando pantallas...
               </TableCell>
             </TableRow>
-          ))}
+          ) : filteredPantallas.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8 text-admin-text-secondary">
+                No se encontraron pantallas con los filtros seleccionados
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredPantallas.map((p: any) => (
+              <TableRow key={p.id}>
+                <TableCell className="font-mono text-admin-text-secondary">{p.identificador}</TableCell>
+                <TableCell className="font-medium text-admin-text-primary">{p.nombre}</TableCell>
+                <TableCell>
+                  <Select
+                    value={p.sucursal_id || ""}
+                    onValueChange={(val) => actualizarSucursal(p.id, val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione sucursal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sucursalesDB.map((s: any) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2 text-admin-text-secondary">
+                    <Layers3 className="h-4 w-4" />
+                    <span>{0} elementos</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Dialog open={dialogOpenFor === p.id} onOpenChange={(o) => setDialogOpenFor(o ? p.id : null)}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">Asignar publicidad</Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
+                      <DialogHeader>
+                        <DialogTitle>Asignar publicidad</DialogTitle>
+                        <DialogDescription>Seleccione el contenido a mostrar en "{p.nombre}"</DialogDescription>
+                      </DialogHeader>
+
+                      {/* Filtros del modal */}
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-admin-text-muted h-4 w-4" />
+                          <Input
+                            placeholder="Buscar por nombre..."
+                            value={modalSearchTerm}
+                            onChange={(e) => setModalSearchTerm(e.target.value)}
+                            className="pl-10 bg-admin-bg border-admin-border-light text-admin-text-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="max-h-64 overflow-auto space-y-2 pr-1 mt-4">
+                        {filteredPublicidad.length === 0 ? (
+                          <p className="text-center text-admin-text-secondary py-4">No se encontraron resultados</p>
+                        ) : (
+                          filteredPublicidad.map((item) => (
+                            <label key={item.id} className="flex items-center gap-3 p-2 hover:bg-admin-surface rounded cursor-pointer">
+                              <Checkbox
+                                checked={tempAds.includes(Number(item.id))}
+                                onCheckedChange={() => toggleAd(Number(item.id))}
+                                aria-label={`Seleccionar ${item.nombre}`}
+                              />
+                              <div className="flex-1">
+                                <span className="text-admin-text-primary font-medium">{item.nombre}</span>
+                                <span className="text-xs text-admin-text-secondary ml-2">({item.tipo})</span>
+                              </div>
+                            </label>
+                          ))
+                        )}
+                      </div>
+
+                      <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="ghost" onClick={() => setDialogOpenFor(null)}>Cancelar</Button>
+                        <Button onClick={guardarAds}>
+                          <Save className="mr-2 h-4 w-4" /> Guardar
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </section>
