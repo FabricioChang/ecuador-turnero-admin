@@ -243,6 +243,47 @@ export default function Usuarios() {
     [usuarios]
   );
 
+  // Filtrar usuarios
+  const usuariosFiltrados = usuarios.filter(usuario => {
+    // Búsqueda por identificador, nombre o cédula
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        usuario.codigo.toLowerCase().includes(searchLower) ||
+        usuario.nombre.toLowerCase().includes(searchLower) ||
+        usuario.cedula.includes(searchTerm);
+      
+      if (!matchesSearch) return false;
+    }
+    
+    // Filtro por región
+    if (regionFilter && regionFilter !== "all" && usuario.region !== regionFilter) {
+      return false;
+    }
+    
+    // Filtro por provincia
+    if (provinciaFilter && provinciaFilter !== "all" && usuario.provincia !== provinciaFilter) {
+      return false;
+    }
+    
+    // Filtro por ciudad
+    if (ciudadFilter && ciudadFilter !== "all" && usuario.ciudad !== ciudadFilter) {
+      return false;
+    }
+    
+    // Filtro por sucursal
+    if (sucursalFilter && sucursalFilter !== "all" && usuario.sucursal !== sucursalFilter) {
+      return false;
+    }
+    
+    // Filtro por código de usuario
+    if (codigoFilter && !usuario.codigo.includes(codigoFilter)) {
+      return false;
+    }
+    
+    return true;
+  });
+
   const onSubmit = (values: FormValues) => {
     // Validación de duplicado (case-insensitive)
     const esMismoCorreo = (email: string) =>
@@ -529,6 +570,99 @@ export default function Usuarios() {
         </Dialog>
       </header>
 
+      {/* Filtros */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por código, nombre o cédula..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <Select value={regionFilter} onValueChange={setRegionFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Región" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las regiones</SelectItem>
+                <SelectItem value="costa">Costa</SelectItem>
+                <SelectItem value="sierra">Sierra</SelectItem>
+                <SelectItem value="amazonia">Amazonía</SelectItem>
+                <SelectItem value="galapagos">Galápagos</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={provinciaFilter} onValueChange={setProvinciaFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Provincia" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las provincias</SelectItem>
+                <SelectItem value="Pichincha">Pichincha</SelectItem>
+                <SelectItem value="Guayas">Guayas</SelectItem>
+                <SelectItem value="Azuay">Azuay</SelectItem>
+                <SelectItem value="Manabí">Manabí</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={ciudadFilter} onValueChange={setCiudadFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Ciudad" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las ciudades</SelectItem>
+                <SelectItem value="Quito">Quito</SelectItem>
+                <SelectItem value="Guayaquil">Guayaquil</SelectItem>
+                <SelectItem value="Cuenca">Cuenca</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las sucursales</SelectItem>
+                <SelectItem value="Sucursal Centro">Sucursal Centro</SelectItem>
+                <SelectItem value="Sucursal Norte">Sucursal Norte</SelectItem>
+                <SelectItem value="Sucursal Sur">Sucursal Sur</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Input
+              placeholder="Código de usuario..."
+              value={codigoFilter}
+              onChange={(e) => setCodigoFilter(e.target.value)}
+            />
+          </div>
+
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setSearchTerm("");
+              setRegionFilter("");
+              setProvinciaFilter("");
+              setCiudadFilter("");
+              setSucursalFilter("");
+              setCodigoFilter("");
+            }}
+          >
+            Limpiar Filtros
+          </Button>
+        </CardContent>
+      </Card>
+
       <section>
         <Table>
           <TableCaption>Listado de usuarios administrativos</TableCaption>
@@ -546,7 +680,7 @@ export default function Usuarios() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {usuarios.map((u) => (
+            {usuariosFiltrados.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-mono">{u.codigo}</TableCell>
                 <TableCell>{u.nombre}</TableCell>
