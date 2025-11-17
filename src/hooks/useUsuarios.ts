@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Usuario {
   id: string;
+  identificador: string;
   nombres: string;
   apellidos: string;
   email: string;

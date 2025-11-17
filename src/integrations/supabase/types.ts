@@ -214,6 +214,7 @@ export type Database = {
           direccion: string | null
           email: string
           id: string
+          identificador: string
           nombres: string
           provincia_id: string | null
           telefono: string | null
@@ -227,6 +228,7 @@ export type Database = {
           direccion?: string | null
           email: string
           id: string
+          identificador: string
           nombres?: string
           provincia_id?: string | null
           telefono?: string | null
@@ -240,6 +242,7 @@ export type Database = {
           direccion?: string | null
           email?: string
           id?: string
+          identificador?: string
           nombres?: string
           provincia_id?: string | null
           telefono?: string | null
@@ -489,6 +492,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_kiosko_identifier: { Args: never; Returns: string }
+      generate_user_identifier: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
