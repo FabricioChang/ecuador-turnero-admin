@@ -14,7 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cantones: {
+        Row: {
+          created_at: string
+          id: string
+          nombre: string
+          provincia_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nombre: string
+          provincia_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nombre?: string
+          provincia_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cantones_provincia_id_fkey"
+            columns: ["provincia_id"]
+            isOneToOne: false
+            referencedRelation: "provincias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provincias: {
+        Row: {
+          codigo: string
+          created_at: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
