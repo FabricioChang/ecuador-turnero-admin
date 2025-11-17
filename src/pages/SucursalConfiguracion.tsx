@@ -3,9 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
@@ -14,96 +12,111 @@ import { useUpdateSucursal, useDeleteSucursal } from "@/hooks/useSucursalesMutat
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { AddressInput } from "@/components/AddressInput";
+import { useRegiones } from "@/hooks/useRegiones";
 
 const SucursalConfiguracion = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { data: sucursales = [] } = useSucursales();
-  const { data: provincias = [] } = useProvincias();
-  const { data: cantones = [] } = useCantones();
   const updateSucursal = useUpdateSucursal();
   const deleteSucursal = useDeleteSucursal();
-
+  
   const [formData, setFormData] = useState({
-    nombre: "Sucursal Centro",
-    descripcion: "",
-    direccion: "",
+    nombre: "",
     provincia_id: "",
     canton_id: "",
-    horarioApertura: "08:00",
-    horarioCierre: "17:00",
+    direccion: "",
+    email: "",
+    telefono_sms: "",
+    capacidad_maxima: "",
     estado: "activo",
-    capacidadMaxima: "50",
-    tiempoPromedioAtencion: "15",
-    notificacionesEmail: true,
-    notificacionesSMS: false,
-    modoMantenimiento: false
   });
+  
+  const [selectedRegion, setSelectedRegion] = useState("");
+
+  const provincias = useProvincias();
+  const cantones = useCantones(formData.provincia_id);
+  const { regiones } = useRegiones();
+
+  const sucursal = sucursales.find((s: any) => s.id === id);
 
   useEffect(() => {
-    const sucursal = sucursales.find((s: any) => s.id === id);
     if (sucursal) {
       setFormData({
         nombre: sucursal.nombre,
-        descripcion: "",
-        direccion: sucursal.direccion || "",
         provincia_id: sucursal.provincia_id,
         canton_id: sucursal.canton_id,
-        horarioApertura: "08:00",
-        horarioCierre: "17:00",
+        direccion: sucursal.direccion || "",
+        email: (sucursal as any).email || "",
+        telefono_sms: (sucursal as any).telefono_sms || "",
+        capacidad_maxima: (sucursal as any).capacidad_maxima?.toString() || "",
         estado: sucursal.estado,
-        capacidadMaxima: "50",
-        tiempoPromedioAtencion: "15",
-        notificacionesEmail: true,
-        notificacionesSMS: false,
-        modoMantenimiento: false
       });
+      
+      // Detectar región basada en la provincia
+      if (sucursal.provincia_id && provincias.data) {
+        const provincia = provincias.data.find(p => p.id === sucursal.provincia_id);
+        if (provincia && regiones) {
+          const region = regiones.find(r => 
+            r.provincias.some(p => p.toLowerCase() === provincia.nombre.toLowerCase())
+          );
+          if (region) {
+            setSelectedRegion(region.nombre);
+          }
+        }
+      }
     }
-  }, [sucursales, id]);
+  }, [sucursal, provincias.data, regiones]);
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData({ ...formData, [id]: value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nombre.trim()) {
+    if (!formData.nombre.trim() || !formData.provincia_id || !formData.canton_id) {
       toast({
         title: "Error",
-        description: "El nombre de la sucursal es requerido",
-        variant: "destructive"
+        description: "Por favor complete todos los campos requeridos",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!formData.direccion.trim()) {
-      toast({
-        title: "Error",
-        description: "La dirección es requerida",
-        variant: "destructive"
+    try {
+      await updateSucursal.mutateAsync({
+        id: id!,
+        nombre: formData.nombre,
+        provincia_id: formData.provincia_id,
+        canton_id: formData.canton_id,
+        direccion: formData.direccion || null,
+        email: formData.email || null,
+        telefono_sms: formData.telefono_sms || null,
+        capacidad_maxima: formData.capacidad_maxima ? parseInt(formData.capacidad_maxima) : null,
+        estado: formData.estado,
       });
-      return;
+
+      toast({
+        title: "Éxito",
+        description: "La sucursal ha sido actualizada correctamente",
+      });
+    } catch (error) {
+      console.error("Error al actualizar sucursal:", error);
     }
-
-    if (!id) return;
-
-    await updateSucursal.mutateAsync({
-      id,
-      nombre: formData.nombre,
-      direccion: formData.direccion,
-      provincia_id: formData.provincia_id,
-      canton_id: formData.canton_id,
-      estado: formData.estado,
-    });
   };
 
   const handleDelete = async () => {
     if (!id) return;
     
     if (window.confirm("¿Está seguro de que desea eliminar esta sucursal? Esta acción no se puede deshacer.")) {
-      await deleteSucursal.mutateAsync(id);
-      navigate('/sucursales');
+      try {
+        await deleteSucursal.mutateAsync(id);
+        navigate('/sucursales');
+      } catch (error) {
+        console.error("Error al eliminar sucursal:", error);
+      }
     }
   };
 
@@ -118,205 +131,210 @@ const SucursalConfiguracion = () => {
             onClick={() => navigate(`/sucursales/${id}/detalles`)}
             className="flex items-center"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Volver a Detalles
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold text-admin-text-primary">Configurar Sucursal</h1>
-            <p className="text-admin-text-secondary">Editar configuración y parámetros</p>
+            <h1 className="text-2xl font-bold">Configuración de Sucursal</h1>
+            <p className="text-muted-foreground">{formData.nombre}</p>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Información Básica */}
-        <Card className="bg-admin-surface border-admin-border-light">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-admin-text-primary">Información Básica</CardTitle>
+            <CardTitle>Configuración General</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="space-y-8">
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold">Información Básica</h3>
+              
               <div className="space-y-2">
                 <Label htmlFor="nombre">Nombre de la Sucursal *</Label>
                 <Input
                   id="nombre"
                   value={formData.nombre}
-                  onChange={(e) => handleInputChange('nombre', e.target.value)}
+                  onChange={handleInputChange}
+                  placeholder="Ej: Sucursal Centro"
                   required
                 />
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="region">Región</Label>
+                  <Input
+                    id="region"
+                    value={selectedRegion}
+                    readOnly
+                    disabled
+                    placeholder="Se detectará automáticamente"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="provincia_id">Provincia *</Label>
+                  <Select
+                    value={formData.provincia_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, provincia_id: value, canton_id: "" })
+                    }
+                  >
+                    <SelectTrigger id="provincia_id">
+                      <SelectValue placeholder="Seleccionar provincia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {provincias.data?.map((provincia) => (
+                        <SelectItem key={provincia.id} value={provincia.id}>
+                          {provincia.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="canton_id">Cantón *</Label>
+                  <Select
+                    value={formData.canton_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, canton_id: value })
+                    }
+                    disabled={!formData.provincia_id}
+                  >
+                    <SelectTrigger id="canton_id">
+                      <SelectValue placeholder="Seleccionar cantón" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cantones.data?.map((canton) => (
+                        <SelectItem key={canton.id} value={canton.id}>
+                          {canton.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="direccion">Dirección</Label>
+                <AddressInput
+                  id="direccion"
+                  value={formData.direccion}
+                  onChange={(value) =>
+                    setFormData({ ...formData, direccion: value })
+                  }
+                  placeholder="Ingrese la dirección"
+                  provincias={provincias.data || []}
+                  cantones={cantones.data || []}
+                  regiones={regiones}
+                  onProvinciaChange={(provinciaId) => 
+                    setFormData({ ...formData, provincia_id: provinciaId, canton_id: "" })
+                  }
+                  onCantonChange={(cantonId) =>
+                    setFormData({ ...formData, canton_id: cantonId })
+                  }
+                  onRegionChange={(regionNombre) =>
+                    setSelectedRegion(regionNombre)
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="capacidad_maxima">Capacidad Máxima</Label>
+                <Input
+                  id="capacidad_maxima"
+                  type="number"
+                  value={formData.capacidad_maxima}
+                  onChange={handleInputChange}
+                  placeholder="Ej: 100"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Número máximo de personas que pueden estar en espera
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado</Label>
-                <Select value={formData.estado} onValueChange={(value) => handleInputChange('estado', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
+                <Select
+                  value={formData.estado}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, estado: value })
+                  }
+                >
+                  <SelectTrigger id="estado">
+                    <SelectValue placeholder="Seleccionar estado" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Activa">Activa</SelectItem>
-                    <SelectItem value="Mantenimiento">En Mantenimiento</SelectItem>
-                    <SelectItem value="Inactiva">Inactiva</SelectItem>
+                    <SelectItem value="activo">Activo</SelectItem>
+                    <SelectItem value="inactivo">Inactivo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="direccion">Dirección *</Label>
-              <AddressInput
-                id="direccion"
-                value={formData.direccion}
-                onChange={(value) => handleInputChange('direccion', value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="descripcion">Descripción</Label>
-              <Textarea
-                id="descripcion"
-                value={formData.descripcion}
-                onChange={(e) => handleInputChange('descripcion', e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Notificaciones */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold">Notificaciones</h3>
+              
               <div className="space-y-2">
-                <Label htmlFor="horarioApertura">Horario de Apertura *</Label>
+                <Label htmlFor="email">Email para Notificaciones</Label>
                 <Input
-                  id="horarioApertura"
-                  type="time"
-                  value={formData.horarioApertura}
-                  onChange={(e) => handleInputChange('horarioApertura', e.target.value)}
-                  required
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="correo@ejemplo.com"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="horarioCierre">Horario de Cierre *</Label>
-                <Input
-                  id="horarioCierre"
-                  type="time"
-                  value={formData.horarioCierre}
-                  onChange={(e) => handleInputChange('horarioCierre', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Configuración Operativa */}
-        <Card className="bg-admin-surface border-admin-border-light">
-          <CardHeader>
-            <CardTitle className="text-admin-text-primary">Configuración Operativa</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="capacidadMaxima">Capacidad Máxima (personas)</Label>
-                <Input
-                  id="capacidadMaxima"
-                  type="number"
-                  min="1"
-                  value={formData.capacidadMaxima}
-                  onChange={(e) => handleInputChange('capacidadMaxima', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tiempoPromedioAtencion">Tiempo Promedio de Atención (minutos)</Label>
-                <Input
-                  id="tiempoPromedioAtencion"
-                  type="number"
-                  min="1"
-                  value={formData.tiempoPromedioAtencion}
-                  onChange={(e) => handleInputChange('tiempoPromedioAtencion', e.target.value)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Configuración de Notificaciones */}
-        <Card className="bg-admin-surface border-admin-border-light">
-          <CardHeader>
-            <CardTitle className="text-admin-text-primary">Notificaciones</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Notificaciones por Email</Label>
-                <p className="text-sm text-admin-text-muted">
-                  Recibir alertas y reportes por correo electrónico
+                <p className="text-sm text-muted-foreground">
+                  Recibir alertas y actualizaciones por correo electrónico
                 </p>
               </div>
-              <Switch
-                checked={formData.notificacionesEmail}
-                onCheckedChange={(checked) => handleInputChange('notificacionesEmail', checked)}
-              />
-            </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Notificaciones por SMS</Label>
-                <p className="text-sm text-admin-text-muted">
-                  Recibir alertas críticas por mensaje de texto
+              <div className="space-y-2">
+                <Label htmlFor="telefono_sms">Teléfono para SMS</Label>
+                <Input
+                  id="telefono_sms"
+                  type="tel"
+                  value={formData.telefono_sms}
+                  onChange={handleInputChange}
+                  placeholder="+593 99 999 9999"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Recibir alertas urgentes por mensaje de texto
                 </p>
               </div>
-              <Switch
-                checked={formData.notificacionesSMS}
-                onCheckedChange={(checked) => handleInputChange('notificacionesSMS', checked)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Configuración Avanzada */}
-        <Card className="bg-admin-surface border-admin-border-light">
-          <CardHeader>
-            <CardTitle className="text-admin-text-primary">Configuración Avanzada</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Modo Mantenimiento</Label>
-                <p className="text-sm text-admin-text-muted">
-                  Activar para pausar operaciones temporalmente
-                </p>
-              </div>
-              <Switch
-                checked={formData.modoMantenimiento}
-                onCheckedChange={(checked) => handleInputChange('modoMantenimiento', checked)}
-              />
             </div>
           </CardContent>
         </Card>
 
         {/* Zona de Peligro */}
-        <Card className="bg-admin-surface border-red-200">
+        <Card className="border-destructive">
           <CardHeader>
-            <CardTitle className="text-red-600">Zona de Peligro</CardTitle>
+            <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-admin-text-primary">Eliminar Sucursal</h4>
-                <p className="text-sm text-admin-text-muted">
-                  Una vez eliminada, toda la información será removida permanentemente.
+                <h4 className="font-semibold">Eliminar Sucursal</h4>
+                <p className="text-sm text-muted-foreground">
+                  Esta acción no se puede deshacer
                 </p>
               </div>
               <Button
                 type="button"
                 variant="destructive"
                 onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700"
+                className="flex items-center"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="mr-2 h-4 w-4" />
                 Eliminar
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Botones de Acción */}
         <div className="flex justify-end space-x-4">
           <Button
             type="button"
@@ -325,8 +343,8 @@ const SucursalConfiguracion = () => {
           >
             Cancelar
           </Button>
-          <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Save className="h-4 w-4 mr-2" />
+          <Button type="submit" className="flex items-center">
+            <Save className="mr-2 h-4 w-4" />
             Guardar Cambios
           </Button>
         </div>

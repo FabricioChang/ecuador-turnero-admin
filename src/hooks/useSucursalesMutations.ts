@@ -10,7 +10,10 @@ export const useCreateSucursal = () => {
       nombre: string;
       provincia_id: string;
       canton_id: string;
-      direccion?: string;
+      direccion?: string | null;
+      email?: string | null;
+      telefono_sms?: string | null;
+      capacidad_maxima?: number | null;
       estado?: string;
     }) => {
       const { data: result, error } = await supabase
@@ -51,7 +54,10 @@ export const useUpdateSucursal = () => {
       nombre?: string;
       provincia_id?: string;
       canton_id?: string;
-      direccion?: string;
+      direccion?: string | null;
+      email?: string | null;
+      telefono_sms?: string | null;
+      capacidad_maxima?: number | null;
       estado?: string;
     }) => {
       const { data: result, error } = await supabase
