@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,7 +47,7 @@ const Roles = () => {
 
   const categories = Object.keys(permissionsByCategory).sort();
 
-  useMemo(() => {
+  useEffect(() => {
     const permissionIds = new Set(rolePermissions.map((rp) => rp.permission_id));
     setSelectedPermissions(permissionIds);
     setHasChanges(false);
