@@ -224,7 +224,15 @@ export default function Roles() {
     setOpen(false);
   };
 
-  const etiquetaPermiso = (id: string) => permisosDisponibles.find((p) => p.id === id)?.label ?? id;
+  const etiquetaPermiso = (id: string) => {
+    for (const categoria of categorias) {
+      const permiso = categoria.permisos.find((p) => p.id === id);
+      if (permiso) {
+        return `${categoria.nombre} - ${permiso.label}`;
+      }
+    }
+    return id;
+  };
 
   return (
     <main className="p-6 space-y-6">
