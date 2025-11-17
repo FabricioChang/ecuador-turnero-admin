@@ -13,6 +13,7 @@ import { useSucursales } from "@/hooks/useSucursales";
 import { useUpdateSucursal, useDeleteSucursal } from "@/hooks/useSucursalesMutations";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
+import { AddressInput } from "@/components/AddressInput";
 
 const SucursalConfiguracion = () => {
   const navigate = useNavigate();
@@ -27,8 +28,6 @@ const SucursalConfiguracion = () => {
     nombre: "Sucursal Centro",
     descripcion: "",
     direccion: "",
-    telefono: "",
-    email: "",
     provincia_id: "",
     canton_id: "",
     horarioApertura: "08:00",
@@ -48,8 +47,6 @@ const SucursalConfiguracion = () => {
         nombre: sucursal.nombre,
         descripcion: "",
         direccion: sucursal.direccion || "",
-        telefono: sucursal.telefono || "",
-        email: sucursal.email || "",
         provincia_id: sucursal.provincia_id,
         canton_id: sucursal.canton_id,
         horarioApertura: "08:00",
@@ -95,8 +92,6 @@ const SucursalConfiguracion = () => {
       id,
       nombre: formData.nombre,
       direccion: formData.direccion,
-      telefono: formData.telefono || undefined,
-      email: formData.email || undefined,
       provincia_id: formData.provincia_id,
       canton_id: formData.canton_id,
       estado: formData.estado,
@@ -167,11 +162,10 @@ const SucursalConfiguracion = () => {
 
             <div className="space-y-2">
               <Label htmlFor="direccion">Dirección *</Label>
-              <Input
+              <AddressInput
                 id="direccion"
                 value={formData.direccion}
-                onChange={(e) => handleInputChange('direccion', e.target.value)}
-                required
+                onChange={(value) => handleInputChange('direccion', value)}
               />
             </div>
 

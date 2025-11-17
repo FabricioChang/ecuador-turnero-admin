@@ -443,39 +443,33 @@ export type Database = {
           canton_id: string
           created_at: string
           direccion: string | null
-          email: string | null
           estado: string
           id: string
           identificador: string
           nombre: string
           provincia_id: string
-          telefono: string | null
           updated_at: string
         }
         Insert: {
           canton_id: string
           created_at?: string
           direccion?: string | null
-          email?: string | null
           estado?: string
           id?: string
           identificador: string
           nombre: string
           provincia_id: string
-          telefono?: string | null
           updated_at?: string
         }
         Update: {
           canton_id?: string
           created_at?: string
           direccion?: string | null
-          email?: string | null
           estado?: string
           id?: string
           identificador?: string
           nombre?: string
           provincia_id?: string
-          telefono?: string | null
           updated_at?: string
         }
         Relationships: [

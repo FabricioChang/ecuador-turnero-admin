@@ -3,16 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Search, Plus, Monitor, Wifi, Settings, Clock } from "lucide-react";
+import { ArrowLeft, Search, Plus, Monitor, Wifi, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { useRegiones } from "@/hooks/useRegiones";
 import { useCreateSucursal } from "@/hooks/useSucursalesMutations";
+import { AddressInput } from "@/components/AddressInput";
 
 interface Kiosko {
   id: number;
@@ -36,8 +36,6 @@ const NuevaSucursal = () => {
     provincia_id: "",
     canton_id: "",
     direccion: "",
-    telefono: "",
-    email: "",
   });
 
   const [searchKioskos, setSearchKioskos] = useState("");
@@ -212,8 +210,6 @@ const NuevaSucursal = () => {
         provincia_id: formData.provincia_id,
         canton_id: formData.canton_id,
         direccion: formData.direccion || undefined,
-        telefono: formData.telefono || undefined,
-        email: formData.email || undefined,
       });
 
       navigate('/sucursales');
@@ -269,7 +265,7 @@ const NuevaSucursal = () => {
             <CardTitle className="text-admin-text-primary">Información Básica</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="nombre">Nombre de la Sucursal *</Label>
                 <Input
@@ -282,10 +278,10 @@ const NuevaSucursal = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="direccion">Dirección</Label>
-                <Input
+                <AddressInput
                   id="direccion"
                   value={formData.direccion}
-                  onChange={(e) => handleInputChange('direccion', e.target.value)}
+                  onChange={(value) => handleInputChange('direccion', value)}
                   placeholder="Ej: Av. 10 de Agosto 123"
                 />
               </div>
@@ -334,27 +330,6 @@ const NuevaSucursal = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="telefono">Teléfono</Label>
-                <Input
-                  id="telefono"
-                  value={formData.telefono}
-                  onChange={(e) => handleInputChange('telefono', e.target.value)}
-                  placeholder="Ej: 02-2345678"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="Ej: sucursal@empresa.com"
-                />
-              </div>
-            </div>
           </CardContent>
         </Card>
 
