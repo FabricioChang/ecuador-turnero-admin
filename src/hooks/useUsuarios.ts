@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface Usuario {
   id: number;
   auth_id: string | null;
+  identificador: string;
   nombres: string;
   apellidos: string;
   email: string;
@@ -14,21 +15,19 @@ export interface Usuario {
   direccion: string | null;
   created_at: string;
   updated_at: string;
-  provincia?: { nombre: string } | null;
-  canton?: { nombre: string } | null;
-  roles?: { rol: string }[];
+  provincia?: { nombre: string };
+  canton?: { nombre: string };
+  user_roles?: { role: string }[];
 }
 
-/**
- * Lista de usuarios desde la nueva tabla `usuarios`.
- */
 export const useUsuarios = () => {
   return useQuery({
     queryKey: ["usuarios"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("usuarios")
-        .select(`
+        .select(
+          `
           id,
           auth_id,
           nombres,
@@ -43,12 +42,23 @@ export const useUsuarios = () => {
           updated_at,
           provincia:provincias(nombre),
           canton:cantones(nombre),
-          roles:roles_usuarios(rol)
-        `)
+          roles_usuarios:roles_usuarios(rol)
+        `
+        )
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as Usuario[];
+
+      const mapped =
+        (data || []).map((u: any) => ({
+          ...u,
+          identificador: u.email || String(u.id),
+          user_roles: (u.roles_usuarios || []).map((r: any) => ({
+            role: r.rol,
+          })),
+        })) as Usuario[];
+
+      return mapped;
     },
     refetchOnMount: true,
     refetchOnWindowFocus: true,

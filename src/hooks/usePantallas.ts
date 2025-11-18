@@ -2,13 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Pantalla {
-  id: string;
-  identificador: string;
+  id: number;
+  identificador: string; // generado
   nombre: string;
-  sucursal_id: string;
+  sucursal_id: number;
   estado: string;
   created_at: string;
   updated_at: string;
+  sucursal?: {
+    nombre: string;
+    provincia?: { nombre: string };
+    canton?: { nombre: string };
+  };
 }
 
 export const usePantallas = () => {
@@ -17,14 +22,32 @@ export const usePantallas = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pantallas")
-        .select(`
-          *,
-          sucursal:sucursales(nombre, provincia:provincias(nombre), canton:cantones(nombre))
-        `)
-        .order("nombre");
+        .select(
+          `
+          id,
+          nombre,
+          sucursal_id,
+          estado,
+          created_at,
+          updated_at,
+          sucursal:sucursales(
+            nombre,
+            provincia:provincias(nombre),
+            canton:cantones(nombre)
+          )
+        `
+        )
+        .order("nombre", { ascending: true });
 
       if (error) throw error;
-      return data as any[];
+
+      const mapped =
+        (data || []).map((p: any) => ({
+          ...p,
+          identificador: String(p.id),
+        })) as Pantalla[];
+
+      return mapped;
     },
   });
 };

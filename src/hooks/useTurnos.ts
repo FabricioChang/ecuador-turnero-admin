@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Turno {
-  id: string;
+  id: number;
   numero: string;
-  categoria_id: string;
-  sucursal_id: string;
-  kiosko_id: string | null;
+  categoria_id: number;
+  sucursal_id: number;
+  kiosko_id: number | null;
   cliente_nombre: string | null;
   cliente_identificacion: string | null;
   estado: string;
@@ -16,8 +16,9 @@ export interface Turno {
   fecha_finalizacion: string | null;
   tiempo_espera: number | null;
   tiempo_atencion: number | null;
-  created_at: string;
-  updated_at: string;
+  categoria?: { nombre: string; color: string };
+  sucursal?: { nombre: string };
+  kiosko?: { nombre: string };
 }
 
 export const useTurnos = () => {
@@ -26,16 +27,18 @@ export const useTurnos = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("turnos")
-        .select(`
+        .select(
+          `
           *,
           categoria:categorias(nombre, color),
           sucursal:sucursales(nombre),
           kiosko:kioskos(nombre)
-        `)
+        `
+        )
         .order("fecha_creacion", { ascending: false });
 
       if (error) throw error;
-      return data as any[];
+      return (data || []) as Turno[];
     },
   });
 };

@@ -4,25 +4,25 @@ import { toast } from "@/hooks/use-toast";
 
 export const useCreatePublicidad = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: {
       nombre: string;
-      tipo: 'imagen' | 'video';
+      tipo: "imagen" | "video";
       url_archivo: string;
       duracion?: number;
       estado?: string;
     }) => {
-      const { data: newId, error } = await supabase.rpc('create_publicidad', {
+      const { data: newId, error } = await supabase.rpc("create_publicidad", {
         _nombre: data.nombre,
         _tipo: data.tipo,
         _url_archivo: data.url_archivo,
-        _duracion: data.duracion || 10,
-        _estado: data.estado || 'activa'
+        _duracion: data.duracion ?? 10,
+        _estado: data.estado ?? "activa",
       });
-      
+
       if (error) throw error;
-      return { id: newId };
+      return newId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["publicidad"] });
@@ -34,7 +34,8 @@ export const useCreatePublicidad = () => {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "No se pudo crear la publicidad",
+        description:
+          error.message || "No se pudo crear la publicidad",
         variant: "destructive",
       });
     },
@@ -43,27 +44,26 @@ export const useCreatePublicidad = () => {
 
 export const useUpdatePublicidad = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ id, nombre, tipo, url_archivo, duracion, estado }: {
-      id: string;
-      nombre?: string;
-      tipo?: 'imagen' | 'video';
-      url_archivo?: string;
+    mutationFn: async (data: {
+      id: string | number;
+      nombre: string;
+      tipo: "imagen" | "video";
+      url_archivo: string;
       duracion?: number;
       estado?: string;
     }) => {
-      const { data: success, error } = await supabase.rpc('update_publicidad', {
-        _id: id,
-        _nombre: nombre!,
-        _tipo: tipo!,
-        _url_archivo: url_archivo!,
-        _duracion: duracion || 10,
-        _estado: estado || 'activa'
+      const { error } = await supabase.rpc("update_publicidad", {
+        _id: Number(data.id),
+        _nombre: data.nombre,
+        _tipo: data.tipo,
+        _url_archivo: data.url_archivo,
+        _duracion: data.duracion ?? 10,
+        _estado: data.estado ?? "activa",
       });
-      
+
       if (error) throw error;
-      return success;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["publicidad"] });
@@ -75,7 +75,8 @@ export const useUpdatePublicidad = () => {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "No se pudo actualizar la publicidad",
+        description:
+          error.message || "No se pudo actualizar la publicidad",
         variant: "destructive",
       });
     },
@@ -84,14 +85,14 @@ export const useUpdatePublicidad = () => {
 
 export const useDeletePublicidad = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string | number) => {
       const { error } = await supabase
         .from("publicidad")
         .delete()
-        .eq("id", id);
-      
+        .eq("id", Number(id));
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -104,7 +105,8 @@ export const useDeletePublicidad = () => {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "No se pudo eliminar la publicidad",
+        description:
+          error.message || "No se pudo eliminar la publicidad",
         variant: "destructive",
       });
     },
