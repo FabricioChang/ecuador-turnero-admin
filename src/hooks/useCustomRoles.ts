@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface CustomRole {
-  id: string;
+  id: number;
+  identificador: string | null;
   nombre: string;
   descripcion: string | null;
   es_sistema: boolean;
@@ -16,13 +17,12 @@ export const useCustomRoles = () => {
     queryKey: ["custom_roles"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("custom_roles")
+        .from("roles_personalizados")
         .select("*")
-        .order("es_sistema", { ascending: false })
         .order("nombre", { ascending: true });
 
       if (error) throw error;
-      return data as CustomRole[];
+      return (data || []) as CustomRole[];
     },
   });
 };
@@ -32,38 +32,25 @@ export const useCreateCustomRole = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ nombre, descripcion, permissionIds }: { nombre: string; descripcion: string; permissionIds: string[] }) => {
-      // Crear el rol
-      const { data: newRole, error: roleError } = await supabase
-        .from("custom_roles")
-        .insert({ nombre, descripcion, es_sistema: false })
-        .select()
+    mutationFn: async (data: { nombre: string; descripcion?: string }) => {
+      const { data: result, error } = await supabase
+        .from("roles_personalizados")
+        .insert({
+          nombre: data.nombre,
+          descripcion: data.descripcion ?? null,
+          es_sistema: false,
+        })
+        .select("id")
         .single();
 
-      if (roleError) throw roleError;
-
-      // Asignar permisos
-      if (permissionIds.length > 0) {
-        const { error: permError } = await supabase
-          .from("custom_role_permissions")
-          .insert(
-            permissionIds.map((permissionId) => ({
-              custom_role_id: newRole.id,
-              permission_id: permissionId,
-            }))
-          );
-
-        if (permError) throw permError;
-      }
-
-      return newRole;
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["custom_roles"] });
-      queryClient.invalidateQueries({ queryKey: ["custom_role_permissions"] });
       toast({
         title: "Rol creado",
-        description: "El nuevo rol ha sido creado exitosamente",
+        description: "El rol personalizado ha sido creado correctamente",
       });
     },
     onError: (error: any) => {
@@ -81,11 +68,18 @@ export const useUpdateCustomRole = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ roleId, nombre, descripcion }: { roleId: string; nombre: string; descripcion: string }) => {
+    mutationFn: async (data: {
+      id: number | string;
+      nombre: string;
+      descripcion?: string;
+    }) => {
       const { error } = await supabase
-        .from("custom_roles")
-        .update({ nombre, descripcion })
-        .eq("id", roleId);
+        .from("roles_personalizados")
+        .update({
+          nombre: data.nombre,
+          descripcion: data.descripcion ?? null,
+        })
+        .eq("id", Number(data.id));
 
       if (error) throw error;
     },
@@ -93,7 +87,7 @@ export const useUpdateCustomRole = () => {
       queryClient.invalidateQueries({ queryKey: ["custom_roles"] });
       toast({
         title: "Rol actualizado",
-        description: "El rol ha sido actualizado exitosamente",
+        description: "El rol personalizado ha sido actualizado",
       });
     },
     onError: (error: any) => {
@@ -111,11 +105,11 @@ export const useDeleteCustomRole = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (roleId: string) => {
+    mutationFn: async (id: number | string) => {
       const { error } = await supabase
-        .from("custom_roles")
+        .from("roles_personalizados")
         .delete()
-        .eq("id", roleId);
+        .eq("id", Number(id));
 
       if (error) throw error;
     },
@@ -123,7 +117,7 @@ export const useDeleteCustomRole = () => {
       queryClient.invalidateQueries({ queryKey: ["custom_roles"] });
       toast({
         title: "Rol eliminado",
-        description: "El rol ha sido eliminado exitosamente",
+        description: "El rol personalizado ha sido eliminado",
       });
     },
     onError: (error: any) => {
@@ -136,24 +130,34 @@ export const useDeleteCustomRole = () => {
   });
 };
 
-export const useCustomRolePermissions = (roleId?: string) => {
+// Permisos de roles personalizados
+export const useCustomRolePermissions = (roleId?: number | string) => {
   return useQuery({
     queryKey: ["custom_role_permissions", roleId],
     queryFn: async () => {
       if (!roleId) return [];
 
       const { data, error } = await supabase
-        .from("custom_role_permissions")
-        .select(`
-          *,
-          permission:permissions(*)
-        `)
-        .eq("custom_role_id", roleId);
+        .from("permisos_por_rol_personalizado")
+        .select(
+          `
+          id,
+          rol_personalizado_id,
+          permiso_id,
+          created_at,
+          permiso:permisos(
+            id,
+            nombre,
+            descripcion,
+            categoria
+          )
+        `
+        )
+        .eq("rol_personalizado_id", Number(roleId));
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
-    enabled: !!roleId,
   });
 };
 
@@ -162,34 +166,40 @@ export const useUpdateCustomRolePermissions = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ roleId, permissionIds }: { roleId: string; permissionIds: string[] }) => {
-      // Eliminar permisos existentes
-      const { error: deleteError } = await supabase
-        .from("custom_role_permissions")
+    mutationFn: async (params: {
+      roleId: number | string;
+      permissionIds: number[];
+    }) => {
+      const { roleId, permissionIds } = params;
+
+      const { error: delError } = await supabase
+        .from("permisos_por_rol_personalizado")
         .delete()
-        .eq("custom_role_id", roleId);
+        .eq("rol_personalizado_id", Number(roleId));
 
-      if (deleteError) throw deleteError;
+      if (delError) throw delError;
 
-      // Insertar nuevos permisos
       if (permissionIds.length > 0) {
-        const { error: insertError } = await supabase
-          .from("custom_role_permissions")
-          .insert(
-            permissionIds.map((permissionId) => ({
-              custom_role_id: roleId,
-              permission_id: permissionId,
-            }))
-          );
+        const inserts = permissionIds.map((permiso_id) => ({
+          rol_personalizado_id: Number(roleId),
+          permiso_id,
+        }));
 
-        if (insertError) throw insertError;
+        const { error: insError } = await supabase
+          .from("permisos_por_rol_personalizado")
+          .insert(inserts);
+
+        if (insError) throw insError;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["custom_role_permissions"] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["custom_role_permissions", variables.roleId],
+      });
       toast({
         title: "Permisos actualizados",
-        description: "Los permisos del rol han sido actualizados correctamente",
+        description:
+          "Los permisos del rol personalizado han sido actualizados",
       });
     },
     onError: (error: any) => {

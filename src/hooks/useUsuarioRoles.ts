@@ -5,21 +5,61 @@ import { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
+async function resolveAuthId(userId: string): Promise<string> {
+  // Si parece UUID (tiene guiones), asumimos que ya es auth_id
+  if (userId.includes("-")) {
+    return userId;
+  }
+
+  // Si no, tratamos como usuario.id
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("auth_id")
+    .eq("id", Number(userId))
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data?.auth_id) {
+    throw new Error("No se encontró auth_id para el usuario indicado");
+  }
+
+  return data.auth_id;
+}
+
+async function resolveUsuarioId(userId: string): Promise<number | null> {
+  // Si viene como entero: usuario.id
+  if (!userId.includes("-")) {
+    return Number(userId);
+  }
+
+  // Si viene como UUID: buscar por auth_id
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("id")
+    .eq("auth_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 export const useUsuarioRoles = (userId?: string) => {
   return useQuery({
     queryKey: ["usuario_roles", userId],
     queryFn: async () => {
       if (!userId) return [];
-      
+
+      const usuarioId = await resolveUsuarioId(userId);
+      if (!usuarioId) return [];
+
       const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
+        .from("roles_usuarios")
+        .select("rol")
+        .eq("usuario_id", usuarioId);
 
       if (error) throw error;
-      return data.map(r => r.role as AppRole);
+      return (data || []).map((r: any) => r.rol as AppRole);
     },
-    enabled: !!userId,
   });
 };
 
@@ -28,20 +68,21 @@ export const useAsignarRol = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { data: newId, error } = await supabase.rpc('assign_user_role', {
-        _user_id: userId,
-        _role: role
+    mutationFn: async (params: { userId: string; role: AppRole }) => {
+      const authId = await resolveAuthId(params.userId);
+
+      const { error } = await supabase.rpc("assign_user_role", {
+        _auth_id: authId,
+        _rol: params.role,
       });
 
       if (error) throw error;
-      return newId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["usuario_roles"] });
       queryClient.invalidateQueries({ queryKey: ["usuarios"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
         description: `No se pudo asignar el rol: ${error.message}`,

@@ -1,325 +1,606 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, TrendingUp, Clock, Users, BarChart3, AlertCircle } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  CalendarIcon,
+  Download,
+  TrendingUp,
+  Clock,
+  Users,
+  BarChart3,
+  AlertCircle,
+} from "lucide-react";
 import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { useReportes } from "@/hooks/useReportes";
 import { useSucursales } from "@/hooks/useSucursales";
 import { useKioskos } from "@/hooks/useKioskos";
 import { useCategorias } from "@/hooks/useCategorias";
-import { exportReportToCSV } from "@/utils/exportReportes";
 import { useToast } from "@/hooks/use-toast";
+import {
+  exportToCSV,
+  exportTurnosDetalle,
+} from "@/utils/exportReportes";
 
 const Reportes = () => {
   const { toast } = useToast();
+  const pieColors = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-6))",
+  ];
+
+
+  // Filtros de fechas
   const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
+
+  // Filtros de entidades
   const [selectedSucursal, setSelectedSucursal] = useState<string>("all");
   const [selectedKiosko, setSelectedKiosko] = useState<string>("all");
   const [selectedCategoria, setSelectedCategoria] = useState<string>("all");
 
+  // Catálogos
   const { data: sucursalesData = [] } = useSucursales();
   const { data: kioskosData = [] } = useKioskos();
   const { data: categoriasData = [] } = useCategorias();
-  
-  const { data: reportData, isLoading } = useReportes(dateFrom, dateTo, selectedSucursal, selectedKiosko, selectedCategoria);
 
-  const handleExport = () => {
-    if (!reportData) {
-      toast({
-        title: "No hay datos",
-        description: "No hay datos disponibles para exportar",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Datos de reportes
+  const { data: reportData, isLoading } = useReportes(
+    dateFrom,
+    dateTo,
+    selectedSucursal,
+    selectedKiosko,
+    selectedCategoria
+  );
 
-    exportReportToCSV(reportData, dateFrom, dateTo);
+const handleExport = () => {
+  if (!reportData || !reportData.turnosRaw?.length) {
     toast({
-      title: "Reporte exportado",
-      description: "El reporte se ha descargado correctamente",
+      title: "No hay datos",
+      description:
+        "No hay turnos para exportar en el rango de fechas y filtros seleccionados.",
     });
-  };
-
-  const sucursales = sucursalesData.map((s: any) => ({ id: s.id, nombre: s.nombre }));
-  const kioskos = kioskosData.map((k: any) => ({ id: k.id, identificador: k.identificador, nombre: k.nombre }));
-  const categorias = categoriasData.map((c: any) => ({ id: c.id, nombre: c.nombre }));
-
-  const metricas = reportData ? [
-    {
-      title: "Total Turnos",
-      value: reportData.metricas.totalTurnos.toString(),
-      change: "",
-      icon: Users,
-      color: "text-blue-600"
-    },
-    {
-      title: "Tiempo Promedio Espera",
-      value: `${reportData.metricas.tiempoPromedioEspera} min`,
-      change: "",
-      icon: Clock,
-      color: "text-green-600"
-    },
-    {
-      title: "Turnos Completados",
-      value: reportData.metricas.turnosCompletados.toString(),
-      change: "",
-      icon: TrendingUp,
-      color: "text-purple-600"
-    },
-    {
-      title: "Eficiencia",
-      value: `${reportData.metricas.eficiencia}%`,
-      change: "",
-      icon: BarChart3,
-      color: "text-orange-600"
-    }
-  ] : [];
-
-  const chartConfig = {
-    turnos: { label: "Turnos", color: "hsl(var(--primary))" },
-    completados: { label: "Completados", color: "hsl(var(--secondary))" },
-    tiempo: { label: "Tiempo (min)", color: "hsl(var(--accent))" },
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-admin-text-muted">Cargando reportes...</p>
-      </div>
-    );
+    return;
   }
 
+  const filenameBase = `reporte_turnos_${format(dateFrom, "yyyy-MM-dd")}_${format(
+    dateTo,
+    "yyyy-MM-dd"
+  )}`;
+
+  const resumen = reportData.turnosPorDia.map((d) => ({
+    Fecha: format(new Date(d.fecha), "dd/MM/yyyy"),
+    "Turnos totales": d.turnos,
+    "Turnos completados": d.completados,
+  }));
+
+  // resumen agregado
+  exportToCSV(resumen, filenameBase);
+  // detalle de cada turno
+  exportTurnosDetalle(reportData.turnosRaw, filenameBase);
+
+  toast({
+    title: "Exportación completada",
+    description: "Los reportes fueron exportados en formato CSV.",
+  });
+};
+
+  const metricas = reportData?.metricas;
+  const turnosPorDia = reportData?.turnosPorDia ?? [];
+  const distribucionCategorias = reportData?.distribucionCategorias ?? [];
+  const actividadSucursales = reportData?.actividadSucursales ?? [];
+  const actividadKioskos = reportData?.actividadKioskos ?? [];
+  const tiemposEsperaPorHora = reportData?.tiemposEsperaPorHora ?? [];
+
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-admin-text-primary">Reportes</h1>
-          <p className="text-admin-text-secondary">Informes y estadísticas del sistema turnero</p>
+          <h1 className="text-2xl font-bold text-admin-text-primary">
+            Reportes y métricas
+          </h1>
+          <p className="text-admin-text-muted">
+            Analiza el comportamiento de los turnos por sucursal, kiosko y
+            categoría.
+          </p>
         </div>
-        <Button variant="outline" onClick={handleExport} disabled={!reportData || isLoading}>
-          <Download className="h-4 w-4 mr-2" />
-          Exportar
-        </Button>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDateFrom(subDays(new Date(), 7));
+              setDateTo(new Date());
+            }}
+          >
+            Últimos 7 días
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDateFrom(subDays(new Date(), 30));
+              setDateTo(new Date());
+            }}
+          >
+            Últimos 30 días
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const today = new Date();
+              setDateFrom(today);
+              setDateTo(today);
+            }}
+          >
+            Hoy
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
-      <Card className="bg-admin-surface border-admin-border-light">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-admin-text-primary">Filtros</CardTitle>
+          <CardTitle>Filtros</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Fecha Inicio</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, "PPP", { locale: es }) : "Seleccionar"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateFrom} onSelect={(date) => date && setDateFrom(date)} locale={es} /></PopoverContent>
-              </Popover>
-            </div>
+        <CardContent className="grid gap-4 md:grid-cols-4">
+          {/* Fecha desde */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-admin-text-primary">
+              Desde
+            </span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-between text-left font-normal",
+                    !dateFrom && "text-muted-foreground"
+                  )}
+                >
+                  {dateFrom ? (
+                    format(dateFrom, "dd 'de' MMMM 'de' yyyy", { locale: es })
+                  ) : (
+                    <span>Selecciona fecha</span>
+                  )}
+                  <CalendarIcon className="ml-2 h-4 w-4 opacity-70" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={(date) => date && setDateFrom(date)}
+                  initialFocus
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Fecha Fin</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, "PPP", { locale: es }) : "Seleccionar"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateTo} onSelect={(date) => date && setDateTo(date)} locale={es} /></PopoverContent>
-              </Popover>
-            </div>
+          {/* Fecha hasta */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-admin-text-primary">
+              Hasta
+            </span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-between text-left font-normal",
+                    !dateTo && "text-muted-foreground"
+                  )}
+                >
+                  {dateTo ? (
+                    format(dateTo, "dd 'de' MMMM 'de' yyyy", { locale: es })
+                  ) : (
+                    <span>Selecciona fecha</span>
+                  )}
+                  <CalendarIcon className="ml-2 h-4 w-4 opacity-70" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={(date) => date && setDateTo(date)}
+                  initialFocus
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sucursal</label>
-              <Select value={selectedSucursal} onValueChange={setSelectedSucursal}>
-                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las sucursales</SelectItem>
-                  {sucursales.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nombre}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Sucursal */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-admin-text-primary">
+              Sucursal
+            </span>
+            <Select
+              value={selectedSucursal}
+              onValueChange={setSelectedSucursal}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas las sucursales" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {sucursalesData.map((s: any) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Kiosko</label>
-              <Select value={selectedKiosko} onValueChange={setSelectedKiosko}>
-                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los kioskos</SelectItem>
-                  {kioskos.map((k: any) => <SelectItem key={k.id} value={k.id}>{k.identificador}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Kiosko */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-admin-text-primary">
+              Kiosko
+            </span>
+            <Select
+              value={selectedKiosko}
+              onValueChange={setSelectedKiosko}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los kioskos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {kioskosData.map((k: any) => (
+                  <SelectItem key={k.id} value={String(k.id)}>
+                    {k.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Categoría</label>
-              <Select value={selectedCategoria} onValueChange={setSelectedCategoria}>
-                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las categorías</SelectItem>
-                  {categorias.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Categoría */}
+          <div className="space-y-2 md:col-span-2">
+            <span className="text-sm font-medium text-admin-text-primary">
+              Categoría
+            </span>
+            <Select
+              value={selectedCategoria}
+              onValueChange={setSelectedCategoria}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas las categorías" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categoriasData.map((c: any) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Botón exportar */}
+          <div className="flex items-end md:justify-end md:col-span-2">
+            <Button onClick={handleExport} className="w-full md:w-auto">
+              <Download className="mr-2 h-4 w-4" />
+              Exportar CSV
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metricas.map((metrica, index) => {
-          const Icon = metrica.icon;
-          return (
-            <Card key={index} className="bg-admin-surface border-admin-border-light">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-admin-text-muted">{metrica.title}</p>
-                    <h3 className="text-2xl font-bold text-admin-text-primary mt-2">{metrica.value}</h3>
-                  </div>
-                  <div className={cn("p-3 rounded-lg bg-admin-bg", metrica.color)}>
-                    <Icon className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <span className="text-admin-text-muted">
+            Cargando datos de reportes...
+          </span>
+        </div>
+      )}
 
-      {/* Gráficos */}
-      {reportData && (
+      {!isLoading && !metricas && (
+        <div className="flex items-center justify-center py-12 text-admin-text-muted">
+          <AlertCircle className="mr-2 h-4 w-4" />
+          No se encontraron datos para el rango de fechas seleccionado.
+        </div>
+      )}
+
+      {!isLoading && metricas && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Turnos por Día */}
-            <Card className="bg-admin-surface border-admin-border-light">
-              <CardHeader>
-                <CardTitle>Turnos por Día</CardTitle>
+          {/* Métricas principales */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Turnos generados
+                </CardTitle>
+                <Users className="h-4 w-4 text-admin-text-muted" />
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <div className="text-2xl font-bold">
+                  {metricas.totalTurnos}
+                </div>
+                <p className="text-xs text-admin-text-muted">
+                  Total de turnos en el periodo seleccionado
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Tiempo promedio de espera
+                </CardTitle>
+                <Clock className="h-4 w-4 text-admin-text-muted" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {metricas.tiempoPromedioEspera} min
+                </div>
+                <p className="text-xs text-admin-text-muted">
+                  Desde la toma del turno hasta el llamado
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Tiempo promedio de atención
+                </CardTitle>
+                <Clock className="h-4 w-4 text-admin-text-muted" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {metricas.tiempoPromedioAtencion} min
+                </div>
+                <p className="text-xs text-admin-text-muted">
+                  Desde el inicio hasta el fin de la atención
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Eficiencia de atención
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-admin-text-muted" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {metricas.eficiencia}%
+                </div>
+                <p className="text-xs text-admin-text-muted">
+                  {metricas.turnosCompletados} turnos completados
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Gráficos principales */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Turnos por día */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Turnos por día</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    turnos: {
+                      label: "Turnos",
+                      color: "hsl(var(--chart-1))",
+                    },
+                    completados: {
+                      label: "Completados",
+                      color: "hsl(var(--chart-2))",
+                    },
+                  }}
+                  className="h-72"
+                >
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={reportData.turnosPorDia}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="fecha" tickFormatter={(val) => format(new Date(val), "dd/MM")} />
+                    <BarChart data={turnosPorDia}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="fecha"
+                        tickFormatter={(value: string) =>
+                          format(new Date(value), "dd/MM", { locale: es })
+                        }
+                      />
                       <YAxis />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
-                      <Bar dataKey="turnos" fill="hsl(var(--primary))" name="Total" />
-                      <Bar dataKey="completados" fill="hsl(var(--secondary))" name="Completados" />
+                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
+                      <Bar dataKey="completados" name="Completados" fill="var(--color-completados)"/>
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
 
-            {/* Distribución por Categorías */}
-            <Card className="bg-admin-surface border-admin-border-light">
+            {/* Distribución por categorías */}
+            <Card>
               <CardHeader>
-                <CardTitle>Distribución por Categorías</CardTitle>
+                <CardTitle>Distribución por categorías</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <CardContent className="flex flex-col items-center justify-center gap-4 md:flex-row">
+                <ChartContainer
+                  config={{
+                    turnos: {
+                      label: "Turnos",
+                      color: "hsl(var(--chart-1))",
+                    },
+                  }}
+                  className="h-72 w-full md:w-1/2"
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={reportData.distribucionCategorias} dataKey="turnos" nameKey="nombre" cx="50%" cy="50%" outerRadius={100} label>
-                        {reportData.distribucionCategorias.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Pie
+                        data={distribucionCategorias}
+                        dataKey="turnos"
+                        nameKey="nombre"
+                        outerRadius={100}
+                        label
+                      >
+                        {distribucionCategorias.map((c, index) => (
+                          <Cell key={index} fill={pieColors[index % pieColors.length]}/>
                         ))}
                       </Pie>
-                      <ChartTooltip />
-                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </ChartContainer>
+                <div className="w-full md:w-1/2 space-y-2">
+                  {distribucionCategorias.map((c, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-admin-text-primary">
+                        {c.nombre}
+                      </span>
+                      <span className="font-medium">
+                        {c.turnos} turno{c.turnos !== 1 && "s"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Tiempos de Espera */}
-          {reportData.tiemposEsperaPorHora.length > 0 && (
-            <Card className="bg-admin-surface border-admin-border-light">
+          {/* Actividad por sucursal / kiosko */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
               <CardHeader>
-                <CardTitle>Tiempos de Espera Promedio por Hora</CardTitle>
+                <CardTitle>Actividad por sucursal</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ChartContainer
+                  config={{
+                    turnos: { label: "Turnos" , color:"hsl(var(--chart-1))"},
+                    eficiencia: { label: "Eficiencia %" },
+                  }}
+                  className="h-72"
+                >
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={reportData.tiemposEsperaPorHora}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hora" />
+                    <BarChart data={actividadSucursales}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="sucursal" />
                       <YAxis />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
-                      <Line type="monotone" dataKey="tiempo" stroke="hsl(var(--accent))" strokeWidth={2} name="Tiempo (min)" />
-                    </LineChart>
+                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
+                    </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
-          )}
 
-          {/* Tablas */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Actividad por Sucursales */}
-            <Card className="bg-admin-surface border-admin-border-light">
+            <Card>
               <CardHeader>
-                <CardTitle>Actividad por Sucursales</CardTitle>
+                <CardTitle>Actividad por kiosko</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {reportData.actividadSucursales.map((suc: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-admin-bg">
-                      <div>
-                        <p className="font-medium text-admin-text-primary">{suc.sucursal}</p>
-                        <p className="text-sm text-admin-text-muted">{suc.turnos} turnos</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-primary">{suc.eficiencia}%</p>
-                        <p className="text-xs text-admin-text-muted">Eficiencia</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Actividad por Kioskos */}
-            <Card className="bg-admin-surface border-admin-border-light">
-              <CardHeader>
-                <CardTitle>Actividad por Kioskos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {reportData.actividadKioskos.map((kiosko: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-admin-bg">
-                      <div>
-                        <p className="font-medium text-admin-text-primary">{kiosko.kiosko}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-primary">{kiosko.turnos}</p>
-                        <p className="text-xs text-admin-text-muted">turnos</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ChartContainer
+                  config={{
+                    turnos: { label: "Turnos", color: "hsl(var(--chart-1))"},
+                  }}
+                  className="h-72"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={actividadKioskos}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="kiosko" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
           </div>
+
+          {/* Tiempo de espera por hora */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tiempo promedio de espera por hora</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  tiempo: { label: "Tiempo de espera (min)", color: "hsl(var(--chart-1))"},
+                }}
+                className="h-72"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={tiemposEsperaPorHora}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hora" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="tiempo"
+                      name="Espera promedio (min)"
+                      stroke="var(--color-tiempo)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

@@ -6,15 +6,15 @@ import { Database } from "@/integrations/supabase/types";
 type AppRole = Database["public"]["Enums"]["app_role"];
 
 export interface RolePermission {
-  id: string;
-  role: AppRole;
-  permission_id: string;
+  id: number;
+  rol: AppRole;
+  permiso_id: number;
   created_at: string;
-  permission?: {
-    id: string;
-    name: string;
-    description: string;
-    category: string;
+  permiso?: {
+    id: number;
+    nombre: string;
+    descripcion: string;
+    categoria: string;
   };
 }
 
@@ -22,21 +22,28 @@ export const useRolePermissions = (role?: AppRole) => {
   return useQuery({
     queryKey: ["role_permissions", role],
     queryFn: async () => {
-      let query = supabase
-        .from("role_permissions")
-        .select(`
-          *,
-          permission:permissions(*)
-        `);
+      if (!role) return [];
 
-      if (role) {
-        query = query.eq("role", role as AppRole);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from("permisos_por_rol")
+        .select(
+          `
+          id,
+          rol,
+          permiso_id,
+          created_at,
+          permiso:permisos(
+            id,
+            nombre,
+            descripcion,
+            categoria
+          )
+        `
+        )
+        .eq("rol", role);
 
       if (error) throw error;
-      return data as RolePermission[];
+      return (data || []) as RolePermission[];
     },
   });
 };
@@ -46,37 +53,43 @@ export const useUpdateRolePermissions = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ role, permissionIds }: { role: AppRole; permissionIds: string[] }) => {
-      // Primero eliminar todos los permisos del rol
-      const { error: deleteError } = await supabase
-        .from("role_permissions")
+    mutationFn: async (params: { role: AppRole; permissionIds: number[] }) => {
+      const { role, permissionIds } = params;
+
+      // borrar permisos actuales
+      const { error: delError } = await supabase
+        .from("permisos_por_rol")
         .delete()
-        .eq("role", role as AppRole);
+        .eq("rol", role);
 
-      if (deleteError) throw deleteError;
+      if (delError) throw delError;
 
-      // Luego insertar los nuevos permisos
       if (permissionIds.length > 0) {
-        const { error: insertError } = await supabase
-          .from("role_permissions")
-          .insert(
-            permissionIds.map((permissionId) => ({
-              role: role as AppRole,
-              permission_id: permissionId,
-            }))
-          );
+        const inserts = permissionIds.map((permiso_id) => ({
+          rol: role,
+          permiso_id,
+        }));
 
-        if (insertError) throw insertError;
+        const { error: insError } = await supabase
+          .from("permisos_por_rol")
+          .insert(inserts);
+
+        if (insError) throw insError;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["role_permissions", variables.role],
+      });
+      queryClient.invalidateQueries({ queryKey: ["permissions"] });
+
       toast({
         title: "Permisos actualizados",
-        description: "Los permisos del rol han sido actualizados correctamente",
+        description:
+          "Los permisos del rol han sido actualizados correctamente",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
         description: `No se pudieron actualizar los permisos: ${error.message}`,

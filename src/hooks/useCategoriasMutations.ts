@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 
 export const useCreateCategoria = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: {
       nombre: string;
@@ -14,17 +14,19 @@ export const useCreateCategoria = () => {
       color?: string;
       estado?: string;
     }) => {
-      const { data: newId, error } = await supabase.rpc('create_categoria', {
+      const { data: newId, error } = await supabase.rpc("create_categoria", {
         _nombre: data.nombre,
-        _color: data.color || '#000000',
-        _tiempo_estimado: data.tiempo_estimado || 15,
-        _sucursal_id: data.sucursal_id || null,
-        _descripcion: data.descripcion || null,
-        _estado: data.estado || 'activo'
+        _color: data.color ?? "#000000",
+        _tiempo_estimado: data.tiempo_estimado ?? 15,
+        _sucursal_id: data.sucursal_id
+          ? Number(data.sucursal_id)
+          : null,
+        _descripcion: data.descripcion ?? null,
+        _estado: data.estado ?? "activo",
       });
-      
+
       if (error) throw error;
-      return { id: newId };
+      return newId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categorias"] });
@@ -36,7 +38,8 @@ export const useCreateCategoria = () => {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "No se pudo crear la categoría",
+        description:
+          error.message || "No se pudo crear la categoría",
         variant: "destructive",
       });
     },
@@ -45,29 +48,30 @@ export const useCreateCategoria = () => {
 
 export const useUpdateCategoria = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ id, nombre, descripcion, tiempo_estimado, sucursal_id, color, estado }: {
+    mutationFn: async (data: {
       id: string;
-      nombre?: string;
+      nombre: string;
       descripcion?: string;
-      tiempo_estimado?: number;
+      tiempo_estimado: number;
       sucursal_id?: string;
       color?: string;
       estado?: string;
     }) => {
-      const { data: success, error } = await supabase.rpc('update_categoria', {
-        _id: id,
-        _nombre: nombre!,
-        _color: color || '#000000',
-        _tiempo_estimado: tiempo_estimado || 15,
-        _sucursal_id: sucursal_id || null,
-        _descripcion: descripcion || null,
-        _estado: estado || 'activo'
+      const { error } = await supabase.rpc("update_categoria", {
+        _id: Number(data.id),
+        _nombre: data.nombre,
+        _color: data.color ?? "#000000",
+        _tiempo_estimado: data.tiempo_estimado,
+        _sucursal_id: data.sucursal_id
+          ? Number(data.sucursal_id)
+          : null,
+        _descripcion: data.descripcion ?? null,
+        _estado: data.estado ?? "activo",
       });
-      
+
       if (error) throw error;
-      return success;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categorias"] });
@@ -79,7 +83,8 @@ export const useUpdateCategoria = () => {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "No se pudo actualizar la categoría",
+        description:
+          error.message || "No se pudo actualizar la categoría",
         variant: "destructive",
       });
     },
@@ -88,14 +93,14 @@ export const useUpdateCategoria = () => {
 
 export const useDeleteCategoria = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("categorias")
         .delete()
-        .eq("id", id);
-      
+        .eq("id", Number(id));
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -108,7 +113,8 @@ export const useDeleteCategoria = () => {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "No se pudo eliminar la categoría",
+        description:
+          error.message || "No se pudo eliminar la categoría",
         variant: "destructive",
       });
     },

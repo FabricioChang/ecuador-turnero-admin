@@ -2,14 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Kiosko {
-  id: string;
+  id: number;
+  identificador: string; // generado
   nombre: string;
-  identificador: string;
-  sucursal_id: string;
+  sucursal_id: number;
   ubicacion: string | null;
   estado: string;
   created_at: string;
   updated_at: string;
+  sucursal?: {
+    nombre: string;
+    provincia?: { nombre: string };
+    canton?: { nombre: string };
+  };
 }
 
 export const useKioskos = () => {
@@ -18,14 +23,33 @@ export const useKioskos = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("kioskos")
-        .select(`
-          *,
-          sucursal:sucursales(nombre, provincia:provincias(nombre), canton:cantones(nombre))
-        `)
-        .order("nombre");
+        .select(
+          `
+          id,
+          nombre,
+          sucursal_id,
+          ubicacion,
+          estado,
+          created_at,
+          updated_at,
+          sucursal:sucursales(
+            nombre,
+            provincia:provincias(nombre),
+            canton:cantones(nombre)
+          )
+        `
+        )
+        .order("nombre", { ascending: true });
 
       if (error) throw error;
-      return data as any[];
+
+      const mapped =
+        (data || []).map((k: any) => ({
+          ...k,
+          identificador: String(k.id),
+        })) as Kiosko[];
+
+      return mapped;
     },
   });
 };

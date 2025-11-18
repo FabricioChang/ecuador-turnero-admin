@@ -3,902 +3,789 @@ export type Json =
   | number
   | boolean
   | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+  | { [key: string]: Json }
+  | Json[];
 
-export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
+export interface Database {
   public: {
     Tables: {
-      cantones: {
-        Row: {
-          created_at: string
-          id: string
-          nombre: string
-          provincia_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          nombre: string
-          provincia_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          nombre?: string
-          provincia_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cantones_provincia_id_fkey"
-            columns: ["provincia_id"]
-            isOneToOne: false
-            referencedRelation: "provincias"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      categorias: {
-        Row: {
-          color: string
-          created_at: string
-          descripcion: string | null
-          estado: string
-          id: string
-          identificador: string | null
-          nombre: string
-          sucursal_id: string | null
-          tiempo_estimado: number
-          updated_at: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string
-          descripcion?: string | null
-          estado?: string
-          id?: string
-          identificador?: string | null
-          nombre: string
-          sucursal_id?: string | null
-          tiempo_estimado?: number
-          updated_at?: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          descripcion?: string | null
-          estado?: string
-          id?: string
-          identificador?: string | null
-          nombre?: string
-          sucursal_id?: string | null
-          tiempo_estimado?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "categorias_sucursal_id_fkey"
-            columns: ["sucursal_id"]
-            isOneToOne: false
-            referencedRelation: "sucursales"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      custom_role_permissions: {
-        Row: {
-          created_at: string
-          custom_role_id: string
-          id: string
-          permission_id: string
-        }
-        Insert: {
-          created_at?: string
-          custom_role_id: string
-          id?: string
-          permission_id: string
-        }
-        Update: {
-          created_at?: string
-          custom_role_id?: string
-          id?: string
-          permission_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "custom_role_permissions_custom_role_id_fkey"
-            columns: ["custom_role_id"]
-            isOneToOne: false
-            referencedRelation: "custom_roles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "custom_role_permissions_permission_id_fkey"
-            columns: ["permission_id"]
-            isOneToOne: false
-            referencedRelation: "permissions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      custom_roles: {
-        Row: {
-          created_at: string
-          descripcion: string | null
-          es_sistema: boolean
-          id: string
-          identificador: string | null
-          nombre: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          descripcion?: string | null
-          es_sistema?: boolean
-          id?: string
-          identificador?: string | null
-          nombre: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          descripcion?: string | null
-          es_sistema?: boolean
-          id?: string
-          identificador?: string | null
-          nombre?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      kioskos: {
-        Row: {
-          created_at: string
-          estado: Database["public"]["Enums"]["estado_kiosko"]
-          id: string
-          identificador: string
-          nombre: string
-          sucursal_id: string
-          ubicacion: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          estado?: Database["public"]["Enums"]["estado_kiosko"]
-          id?: string
-          identificador: string
-          nombre: string
-          sucursal_id: string
-          ubicacion?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          estado?: Database["public"]["Enums"]["estado_kiosko"]
-          id?: string
-          identificador?: string
-          nombre?: string
-          sucursal_id?: string
-          ubicacion?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kioskos_sucursal_id_fkey"
-            columns: ["sucursal_id"]
-            isOneToOne: false
-            referencedRelation: "sucursales"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      pantalla_publicidad: {
-        Row: {
-          created_at: string
-          id: string
-          orden: number
-          pantalla_id: string
-          publicidad_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          orden?: number
-          pantalla_id: string
-          publicidad_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          orden?: number
-          pantalla_id?: string
-          publicidad_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pantalla_publicidad_pantalla_id_fkey"
-            columns: ["pantalla_id"]
-            isOneToOne: false
-            referencedRelation: "pantallas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pantalla_publicidad_publicidad_id_fkey"
-            columns: ["publicidad_id"]
-            isOneToOne: false
-            referencedRelation: "publicidad"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      pantallas: {
-        Row: {
-          created_at: string
-          estado: string
-          id: string
-          identificador: string
-          nombre: string
-          sucursal_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          estado?: string
-          id?: string
-          identificador: string
-          nombre: string
-          sucursal_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          estado?: string
-          id?: string
-          identificador?: string
-          nombre?: string
-          sucursal_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pantallas_sucursal_id_fkey"
-            columns: ["sucursal_id"]
-            isOneToOne: false
-            referencedRelation: "sucursales"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      permissions: {
-        Row: {
-          category: string
-          created_at: string
-          description: string
-          id: string
-          name: string
-        }
-        Insert: {
-          category: string
-          created_at?: string
-          description: string
-          id?: string
-          name: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          description?: string
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          apellidos: string
-          canton_id: string | null
-          cedula: string | null
-          created_at: string
-          direccion: string | null
-          email: string
-          id: string
-          identificador: string
-          nombres: string
-          provincia_id: string | null
-          telefono: string | null
-          updated_at: string
-        }
-        Insert: {
-          apellidos?: string
-          canton_id?: string | null
-          cedula?: string | null
-          created_at?: string
-          direccion?: string | null
-          email: string
-          id: string
-          identificador: string
-          nombres?: string
-          provincia_id?: string | null
-          telefono?: string | null
-          updated_at?: string
-        }
-        Update: {
-          apellidos?: string
-          canton_id?: string | null
-          cedula?: string | null
-          created_at?: string
-          direccion?: string | null
-          email?: string
-          id?: string
-          identificador?: string
-          nombres?: string
-          provincia_id?: string | null
-          telefono?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_canton_id_fkey"
-            columns: ["canton_id"]
-            isOneToOne: false
-            referencedRelation: "cantones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_provincia_id_fkey"
-            columns: ["provincia_id"]
-            isOneToOne: false
-            referencedRelation: "provincias"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       provincias: {
         Row: {
-          codigo: string
-          created_at: string
-          id: string
-          nombre: string
-        }
+          id: number;
+          nombre: string;
+          created_at: string;
+        };
         Insert: {
-          codigo: string
-          created_at?: string
-          id?: string
-          nombre: string
-        }
+          id?: number;
+          nombre: string;
+          created_at?: string;
+        };
         Update: {
-          codigo?: string
-          created_at?: string
-          id?: string
-          nombre?: string
-        }
-        Relationships: []
-      }
-      publicidad: {
+          id?: number;
+          nombre?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      cantones: {
         Row: {
-          created_at: string
-          duracion: number
-          estado: string
-          fecha_creacion: string
-          id: string
-          identificador: string | null
-          nombre: string
-          tipo: Database["public"]["Enums"]["tipo_publicidad"]
-          updated_at: string
-          url_archivo: string
-        }
+          id: number;
+          nombre: string;
+          provincia_id: number;
+          created_at: string;
+        };
         Insert: {
-          created_at?: string
-          duracion?: number
-          estado?: string
-          fecha_creacion?: string
-          id?: string
-          identificador?: string | null
-          nombre: string
-          tipo: Database["public"]["Enums"]["tipo_publicidad"]
-          updated_at?: string
-          url_archivo: string
-        }
+          id?: number;
+          nombre: string;
+          provincia_id: number;
+          created_at?: string;
+        };
         Update: {
-          created_at?: string
-          duracion?: number
-          estado?: string
-          fecha_creacion?: string
-          id?: string
-          identificador?: string | null
-          nombre?: string
-          tipo?: Database["public"]["Enums"]["tipo_publicidad"]
-          updated_at?: string
-          url_archivo?: string
-        }
-        Relationships: []
-      }
-      role_permissions: {
-        Row: {
-          created_at: string
-          id: string
-          permission_id: string
-          role: Database["public"]["Enums"]["app_role"]
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          permission_id: string
-          role: Database["public"]["Enums"]["app_role"]
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          permission_id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-        }
+          id?: number;
+          nombre?: string;
+          provincia_id?: number;
+          created_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "role_permissions_permission_id_fkey"
-            columns: ["permission_id"]
-            isOneToOne: false
-            referencedRelation: "permissions"
-            referencedColumns: ["id"]
+            foreignKeyName: "cantones_provincia_id_fkey";
+            columns: ["provincia_id"];
+            referencedRelation: "provincias";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      usuarios: {
+        Row: {
+          id: number;
+          auth_id: string | null; // UUID
+          nombres: string;
+          apellidos: string;
+          email: string;
+          telefono: string | null;
+          cedula: string | null;
+          provincia_id: number | null;
+          canton_id: number | null;
+          direccion: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          auth_id?: string | null;
+          nombres?: string;
+          apellidos?: string;
+          email: string;
+          telefono?: string | null;
+          cedula?: string | null;
+          provincia_id?: number | null;
+          canton_id?: number | null;
+          direccion?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          auth_id?: string | null;
+          nombres?: string;
+          apellidos?: string;
+          email?: string;
+          telefono?: string | null;
+          cedula?: string | null;
+          provincia_id?: number | null;
+          canton_id?: number | null;
+          direccion?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_auth_id_fkey";
+            columns: ["auth_id"];
+            referencedRelation: "users"; // auth.users
+            referencedColumns: ["id"];
           },
-        ]
-      }
+          {
+            foreignKeyName: "usuarios_provincia_id_fkey";
+            columns: ["provincia_id"];
+            referencedRelation: "provincias";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "usuarios_canton_id_fkey";
+            columns: ["canton_id"];
+            referencedRelation: "cantones";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
       sucursales: {
         Row: {
-          canton_id: string
-          capacidad_maxima: number | null
-          created_at: string
-          direccion: string | null
-          email: string | null
-          estado: string
-          id: string
-          identificador: string
-          nombre: string
-          provincia_id: string
-          telefono_sms: string | null
-          updated_at: string
-        }
+          id: number;
+          nombre: string;
+          provincia_id: number;
+          canton_id: number;
+          direccion: string | null;
+          email: string | null;
+          telefono_sms: string | null;
+          capacidad_maxima: number | null;
+          estado: string;
+          created_at: string;
+          updated_at: string;
+        };
         Insert: {
-          canton_id: string
-          capacidad_maxima?: number | null
-          created_at?: string
-          direccion?: string | null
-          email?: string | null
-          estado?: string
-          id?: string
-          identificador: string
-          nombre: string
-          provincia_id: string
-          telefono_sms?: string | null
-          updated_at?: string
-        }
+          id?: number;
+          nombre: string;
+          provincia_id: number;
+          canton_id: number;
+          direccion?: string | null;
+          email?: string | null;
+          telefono_sms?: string | null;
+          capacidad_maxima?: number | null;
+          estado?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          canton_id?: string
-          capacidad_maxima?: number | null
-          created_at?: string
-          direccion?: string | null
-          email?: string | null
-          estado?: string
-          id?: string
-          identificador?: string
-          nombre?: string
-          provincia_id?: string
-          telefono_sms?: string | null
-          updated_at?: string
-        }
+          id?: number;
+          nombre?: string;
+          provincia_id?: number;
+          canton_id?: number;
+          direccion?: string | null;
+          email?: string | null;
+          telefono_sms?: string | null;
+          capacidad_maxima?: number | null;
+          estado?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "sucursales_canton_id_fkey"
-            columns: ["canton_id"]
-            isOneToOne: false
-            referencedRelation: "cantones"
-            referencedColumns: ["id"]
+            foreignKeyName: "sucursales_provincia_id_fkey";
+            columns: ["provincia_id"];
+            referencedRelation: "provincias";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "sucursales_provincia_id_fkey"
-            columns: ["provincia_id"]
-            isOneToOne: false
-            referencedRelation: "provincias"
-            referencedColumns: ["id"]
+            foreignKeyName: "sucursales_canton_id_fkey";
+            columns: ["canton_id"];
+            referencedRelation: "cantones";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      categorias: {
+        Row: {
+          id: number;
+          nombre: string;
+          descripcion: string | null;
+          color: string;
+          tiempo_estimado: number;
+          sucursal_id: number | null;
+          estado: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          nombre: string;
+          descripcion?: string | null;
+          color?: string;
+          tiempo_estimado?: number;
+          sucursal_id?: number | null;
+          estado?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          nombre?: string;
+          descripcion?: string | null;
+          color?: string;
+          tiempo_estimado?: number;
+          sucursal_id?: number | null;
+          estado?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "categorias_sucursal_id_fkey";
+            columns: ["sucursal_id"];
+            referencedRelation: "sucursales";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      kioskos: {
+        Row: {
+          id: number;
+          nombre: string;
+          sucursal_id: number;
+          ubicacion: string | null;
+          estado: Database["public"]["Enums"]["estado_kiosko"];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          nombre: string;
+          sucursal_id: number;
+          ubicacion?: string | null;
+          estado?: Database["public"]["Enums"]["estado_kiosko"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          nombre?: string;
+          sucursal_id?: number;
+          ubicacion?: string | null;
+          estado?: Database["public"]["Enums"]["estado_kiosko"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "kioskos_sucursal_id_fkey";
+            columns: ["sucursal_id"];
+            referencedRelation: "sucursales";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      pantallas: {
+        Row: {
+          id: number;
+          nombre: string;
+          sucursal_id: number;
+          estado: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          nombre: string;
+          sucursal_id: number;
+          estado?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          nombre?: string;
+          sucursal_id?: number;
+          estado?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pantallas_sucursal_id_fkey";
+            columns: ["sucursal_id"];
+            referencedRelation: "sucursales";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      publicidad: {
+        Row: {
+          id: number;
+          nombre: string;
+          tipo: Database["public"]["Enums"]["tipo_publicidad"];
+          url_archivo: string;
+          duracion: number;
+          estado: string;
+          fecha_creacion: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          nombre: string;
+          tipo: Database["public"]["Enums"]["tipo_publicidad"];
+          url_archivo: string;
+          duracion?: number;
+          estado?: string;
+          fecha_creacion?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          nombre?: string;
+          tipo?: Database["public"]["Enums"]["tipo_publicidad"];
+          url_archivo?: string;
+          duracion?: number;
+          estado?: string;
+          fecha_creacion?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      pantalla_publicidad: {
+        Row: {
+          id: number;
+          pantalla_id: number;
+          publicidad_id: number;
+          orden: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          pantalla_id: number;
+          publicidad_id: number;
+          orden?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          pantalla_id?: number;
+          publicidad_id?: number;
+          orden?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pantalla_publicidad_pantalla_id_fkey";
+            columns: ["pantalla_id"];
+            referencedRelation: "pantallas";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+          {
+            foreignKeyName: "pantalla_publicidad_publicidad_id_fkey";
+            columns: ["publicidad_id"];
+            referencedRelation: "publicidad";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
       turnos: {
         Row: {
-          categoria_id: string
-          cliente_identificacion: string | null
-          cliente_nombre: string | null
-          created_at: string
-          estado: Database["public"]["Enums"]["estado_turno"]
-          fecha_atencion: string | null
-          fecha_creacion: string
-          fecha_finalizacion: string | null
-          fecha_llamado: string | null
-          id: string
-          kiosko_id: string | null
-          numero: string
-          sucursal_id: string
-          tiempo_atencion: number | null
-          tiempo_espera: number | null
-          updated_at: string
-        }
+          id: number;
+          numero: string;
+          categoria_id: number;
+          sucursal_id: number;
+          kiosko_id: number | null;
+          cliente_nombre: string | null;
+          cliente_identificacion: string | null;
+          estado: Database["public"]["Enums"]["estado_turno"];
+          fecha_creacion: string;
+          fecha_llamado: string | null;
+          fecha_atencion: string | null;
+          fecha_finalizacion: string | null;
+          tiempo_espera: number | null;
+          tiempo_atencion: number | null;
+          created_at: string;
+          updated_at: string;
+        };
         Insert: {
-          categoria_id: string
-          cliente_identificacion?: string | null
-          cliente_nombre?: string | null
-          created_at?: string
-          estado?: Database["public"]["Enums"]["estado_turno"]
-          fecha_atencion?: string | null
-          fecha_creacion?: string
-          fecha_finalizacion?: string | null
-          fecha_llamado?: string | null
-          id?: string
-          kiosko_id?: string | null
-          numero: string
-          sucursal_id: string
-          tiempo_atencion?: number | null
-          tiempo_espera?: number | null
-          updated_at?: string
-        }
+          id?: number;
+          numero: string;
+          categoria_id: number;
+          sucursal_id: number;
+          kiosko_id?: number | null;
+          cliente_nombre?: string | null;
+          cliente_identificacion?: string | null;
+          estado?: Database["public"]["Enums"]["estado_turno"];
+          fecha_creacion?: string;
+          fecha_llamado?: string | null;
+          fecha_atencion?: string | null;
+          fecha_finalizacion?: string | null;
+          tiempo_espera?: number | null;
+          tiempo_atencion?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          categoria_id?: string
-          cliente_identificacion?: string | null
-          cliente_nombre?: string | null
-          created_at?: string
-          estado?: Database["public"]["Enums"]["estado_turno"]
-          fecha_atencion?: string | null
-          fecha_creacion?: string
-          fecha_finalizacion?: string | null
-          fecha_llamado?: string | null
-          id?: string
-          kiosko_id?: string | null
-          numero?: string
-          sucursal_id?: string
-          tiempo_atencion?: number | null
-          tiempo_espera?: number | null
-          updated_at?: string
-        }
+          id?: number;
+          numero?: string;
+          categoria_id?: number;
+          sucursal_id?: number;
+          kiosko_id?: number | null;
+          cliente_nombre?: string | null;
+          cliente_identificacion?: string | null;
+          estado?: Database["public"]["Enums"]["estado_turno"];
+          fecha_creacion?: string;
+          fecha_llamado?: string | null;
+          fecha_atencion?: string | null;
+          fecha_finalizacion?: string | null;
+          tiempo_espera?: number | null;
+          tiempo_atencion?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "turnos_categoria_id_fkey"
-            columns: ["categoria_id"]
-            isOneToOne: false
-            referencedRelation: "categorias"
-            referencedColumns: ["id"]
+            foreignKeyName: "turnos_categoria_id_fkey";
+            columns: ["categoria_id"];
+            referencedRelation: "categorias";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "turnos_kiosko_id_fkey"
-            columns: ["kiosko_id"]
-            isOneToOne: false
-            referencedRelation: "kioskos"
-            referencedColumns: ["id"]
+            foreignKeyName: "turnos_sucursal_id_fkey";
+            columns: ["sucursal_id"];
+            referencedRelation: "sucursales";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "turnos_sucursal_id_fkey"
-            columns: ["sucursal_id"]
-            isOneToOne: false
-            referencedRelation: "sucursales"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_roles: {
+            foreignKeyName: "turnos_kiosko_id_fkey";
+            columns: ["kiosko_id"];
+            referencedRelation: "kioskos";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      permisos: {
         Row: {
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
+          id: number;
+          nombre: string;
+          descripcion: string;
+          categoria: string;
+          created_at: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
+          id?: number;
+          nombre: string;
+          descripcion: string;
+          categoria: string;
+          created_at?: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
+          id?: number;
+          nombre?: string;
+          descripcion?: string;
+          categoria?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      roles_personalizados: {
+        Row: {
+          id: number;
+          identificador: string | null;
+          nombre: string;
+          descripcion: string | null;
+          es_sistema: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          identificador?: string | null;
+          nombre: string;
+          descripcion?: string | null;
+          es_sistema?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          identificador?: string | null;
+          nombre?: string;
+          descripcion?: string | null;
+          es_sistema?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      roles_usuarios: {
+        Row: {
+          id: number;
+          usuario_id: number;
+          rol: Database["public"]["Enums"]["app_role"];
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          usuario_id: number;
+          rol: Database["public"]["Enums"]["app_role"];
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          usuario_id?: number;
+          rol?: Database["public"]["Enums"]["app_role"];
+          created_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "user_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            foreignKeyName: "roles_usuarios_usuario_id_fkey";
+            columns: ["usuario_id"];
+            referencedRelation: "usuarios";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      permisos_por_rol: {
+        Row: {
+          id: number;
+          rol: Database["public"]["Enums"]["app_role"];
+          permiso_id: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          rol: Database["public"]["Enums"]["app_role"];
+          permiso_id: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          rol?: Database["public"]["Enums"]["app_role"];
+          permiso_id?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "permisos_por_rol_permiso_id_fkey";
+            columns: ["permiso_id"];
+            referencedRelation: "permisos";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      permisos_por_rol_personalizado: {
+        Row: {
+          id: number;
+          rol_personalizado_id: number;
+          permiso_id: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          rol_personalizado_id: number;
+          permiso_id: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          rol_personalizado_id?: number;
+          permiso_id?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName:
+              "permisos_por_rol_personalizado_rol_personalizado_id_fkey";
+            columns: ["rol_personalizado_id"];
+            referencedRelation: "roles_personalizados";
+            referencedColumns: ["id"];
           },
-        ]
-      }
-    }
+          {
+            foreignKeyName:
+              "permisos_por_rol_personalizado_permiso_id_fkey";
+            columns: ["permiso_id"];
+            referencedRelation: "permisos";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+    };
+
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
+
     Functions: {
-      assign_user_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: string
-      }
-      create_categoria: {
-        Args: {
-          _color?: string
-          _descripcion?: string
-          _estado?: string
-          _nombre: string
-          _sucursal_id?: string
-          _tiempo_estimado?: number
-        }
-        Returns: string
-      }
-      create_kiosko: {
-        Args: {
-          _estado?: Database["public"]["Enums"]["estado_kiosko"]
-          _identificador: string
-          _nombre: string
-          _sucursal_id: string
-          _ubicacion?: string
-        }
-        Returns: string
-      }
-      create_pantalla: {
-        Args: {
-          _estado?: string
-          _identificador: string
-          _nombre: string
-          _sucursal_id: string
-        }
-        Returns: string
-      }
-      create_publicidad: {
-        Args: {
-          _duracion?: number
-          _estado?: string
-          _nombre: string
-          _tipo: Database["public"]["Enums"]["tipo_publicidad"]
-          _url_archivo: string
-        }
-        Returns: string
-      }
-      create_sucursal: {
-        Args: {
-          _canton_id: string
-          _capacidad_maxima?: number
-          _direccion?: string
-          _email?: string
-          _estado?: string
-          _identificador: string
-          _nombre: string
-          _provincia_id: string
-          _telefono_sms?: string
-        }
-        Returns: string
-      }
-      generate_categoria_identifier: { Args: never; Returns: string }
-      generate_custom_role_identifier: { Args: never; Returns: string }
-      generate_kiosko_identifier: { Args: never; Returns: string }
-      generate_pantalla_identifier: { Args: never; Returns: string }
-      generate_publicidad_identifier: { Args: never; Returns: string }
-      generate_sucursal_identifier: { Args: never; Returns: string }
-      generate_user_identifier: { Args: never; Returns: string }
+      // helpers de permisos/roles
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+          _auth_id: string;
+          _rol: Database["public"]["Enums"]["app_role"];
+        };
+        Returns: boolean;
+      };
       role_has_permission: {
         Args: {
-          _permission_name: string
-          _role: Database["public"]["Enums"]["app_role"]
-        }
-        Returns: boolean
-      }
-      update_categoria: {
+          _rol: Database["public"]["Enums"]["app_role"];
+          _permiso_nombre: string;
+        };
+        Returns: boolean;
+      };
+      user_has_permission: {
         Args: {
-          _color: string
-          _descripcion?: string
-          _estado?: string
-          _id: string
-          _nombre: string
-          _sucursal_id?: string
-          _tiempo_estimado: number
-        }
-        Returns: boolean
-      }
-      update_kiosko: {
+          _auth_id: string;
+          _permiso_nombre: string;
+        };
+        Returns: boolean;
+      };
+
+      // CRUD principales que podrías llamar vía RPC
+      create_sucursal: {
         Args: {
-          _estado?: Database["public"]["Enums"]["estado_kiosko"]
-          _id: string
-          _nombre: string
-          _sucursal_id: string
-          _ubicacion?: string
-        }
-        Returns: boolean
-      }
-      update_pantalla: {
-        Args: {
-          _estado?: string
-          _id: string
-          _nombre: string
-          _sucursal_id: string
-        }
-        Returns: boolean
-      }
-      update_publicidad: {
-        Args: {
-          _duracion?: number
-          _estado?: string
-          _id: string
-          _nombre: string
-          _tipo: Database["public"]["Enums"]["tipo_publicidad"]
-          _url_archivo: string
-        }
-        Returns: boolean
-      }
+          _nombre: string;
+          _provincia_id: number;
+          _canton_id: number;
+          _direccion?: string | null;
+          _email?: string | null;
+          _telefono_sms?: string | null;
+          _capacidad_maxima?: number | null;
+          _estado?: string;
+        };
+        Returns: number;
+      };
       update_sucursal: {
         Args: {
-          _canton_id: string
-          _capacidad_maxima?: number
-          _direccion?: string
-          _email?: string
-          _estado?: string
-          _id: string
-          _nombre: string
-          _provincia_id: string
-          _telefono_sms?: string
-        }
-        Returns: boolean
-      }
-      user_has_permission: {
-        Args: { _permission_name: string; _user_id: string }
-        Returns: boolean
-      }
-    }
+          _id: number;
+          _nombre: string;
+          _provincia_id: number;
+          _canton_id: number;
+          _direccion?: string | null;
+          _email?: string | null;
+          _telefono_sms?: string | null;
+          _capacidad_maxima?: number | null;
+          _estado?: string;
+        };
+        Returns: boolean;
+      };
+
+      create_categoria: {
+        Args: {
+          _nombre: string;
+          _color?: string;
+          _tiempo_estimado?: number;
+          _sucursal_id?: number | null;
+          _descripcion?: string | null;
+          _estado?: string;
+        };
+        Returns: number;
+      };
+      update_categoria: {
+        Args: {
+          _id: number;
+          _nombre: string;
+          _color: string;
+          _tiempo_estimado: number;
+          _sucursal_id?: number | null;
+          _descripcion?: string | null;
+          _estado?: string;
+        };
+        Returns: boolean;
+      };
+
+      create_kiosko: {
+        Args: {
+          _nombre: string;
+          _sucursal_id: number;
+          _ubicacion?: string | null;
+          _estado?: Database["public"]["Enums"]["estado_kiosko"];
+        };
+        Returns: number;
+      };
+      update_kiosko: {
+        Args: {
+          _id: number;
+          _nombre: string;
+          _sucursal_id: number;
+          _ubicacion?: string | null;
+          _estado?: Database["public"]["Enums"]["estado_kiosko"];
+        };
+        Returns: boolean;
+      };
+
+      create_pantalla: {
+        Args: {
+          _nombre: string;
+          _sucursal_id: number;
+          _estado?: string;
+        };
+        Returns: number;
+      };
+      update_pantalla: {
+        Args: {
+          _id: number;
+          _nombre: string;
+          _sucursal_id: number;
+          _estado?: string;
+        };
+        Returns: boolean;
+      };
+
+      create_publicidad: {
+        Args: {
+          _nombre: string;
+          _tipo: Database["public"]["Enums"]["tipo_publicidad"];
+          _url_archivo: string;
+          _duracion?: number;
+          _estado?: string;
+        };
+        Returns: number;
+      };
+      update_publicidad: {
+        Args: {
+          _id: number;
+          _nombre: string;
+          _tipo: Database["public"]["Enums"]["tipo_publicidad"];
+          _url_archivo: string;
+          _duracion?: number;
+          _estado?: string;
+        };
+        Returns: boolean;
+      };
+
+      assign_user_role: {
+        Args: {
+          _auth_id: string;
+          _rol: Database["public"]["Enums"]["app_role"];
+        };
+        Returns: number;
+      };
+
+      // funciones trigger, normalmente no se llaman por RPC
+      actualizar_updated_at: {
+        Args: Record<PropertyKey, never>;
+        Returns: unknown;
+      };
+      handle_new_user: {
+        Args: Record<PropertyKey, never>;
+        Returns: unknown;
+      };
+    };
+
     Enums: {
-      app_role: "admin" | "operador" | "supervisor" | "usuario"
-      estado_kiosko: "activo" | "inactivo" | "mantenimiento"
-      estado_turno: "pendiente" | "en_atencion" | "atendido" | "cancelado"
-      tipo_publicidad: "imagen" | "video"
-    }
+      app_role: "admin" | "operador" | "supervisor" | "usuario";
+      estado_kiosko: "activo" | "inactivo" | "mantenimiento";
+      estado_turno: "pendiente" | "en_atencion" | "atendido" | "cancelado";
+      tipo_publicidad: "imagen" | "video";
+    };
+
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+  };
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+// Helpers opcionales, típicos de Supabase
+export type PublicSchema = Database["public"];
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+  TName extends keyof PublicSchema["Tables"]
+> = PublicSchema["Tables"][TName]["Row"];
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
+  TName extends keyof PublicSchema["Tables"]
+> = PublicSchema["Tables"][TName]["Insert"];
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
+  TName extends keyof PublicSchema["Tables"]
+> = PublicSchema["Tables"][TName]["Update"];
 
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      app_role: ["admin", "operador", "supervisor", "usuario"],
-      estado_kiosko: ["activo", "inactivo", "mantenimiento"],
-      estado_turno: ["pendiente", "en_atencion", "atendido", "cancelado"],
-      tipo_publicidad: ["imagen", "video"],
-    },
-  },
-} as const
+export type Enums<TName extends keyof PublicSchema["Enums"]> =
+  PublicSchema["Enums"][TName];

@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Canton {
-  id: string;
+  id: number;
   nombre: string;
-  provincia_id: string;
+  provincia_id: number;
   created_at: string;
 }
 
@@ -15,17 +15,16 @@ export const useCantones = (provinciaId?: string) => {
       let query = supabase
         .from("cantones")
         .select("*")
-        .order("nombre");
+        .order("nombre", { ascending: true });
 
-      if (provinciaId) {
-        query = query.eq("provincia_id", provinciaId);
+      if (provinciaId && provinciaId !== "all") {
+        query = query.eq("provincia_id", Number(provinciaId));
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as Canton[];
+      return (data || []) as Canton[];
     },
-    enabled: true, // Siempre habilitada, pero filtra por provincia si se proporciona
   });
 };

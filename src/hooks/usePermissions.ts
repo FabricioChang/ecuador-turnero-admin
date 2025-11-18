@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Permission {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
+  id: number;
+  nombre: string;
+  descripcion: string;
+  categoria: string;
   created_at: string;
 }
 
@@ -14,13 +14,13 @@ export const usePermissions = () => {
     queryKey: ["permissions"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("permissions")
+        .from("permisos")
         .select("*")
-        .order("category", { ascending: true })
-        .order("name", { ascending: true });
+        .order("categoria", { ascending: true })
+        .order("nombre", { ascending: true });
 
       if (error) throw error;
-      return data as Permission[];
+      return (data || []) as Permission[];
     },
   });
 };

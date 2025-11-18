@@ -78,9 +78,43 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+// Mapeo región -> provincias (nombres). Ajusta si la DB tiene un campo region en provincias.
+const REGION_MAP: Record<string, string[]> = {
+  Sierra: [
+    "Azuay",
+    "Bolívar",
+    "Cañar",
+    "Chimborazo",
+    "Cotopaxi",
+    "Imbabura",
+    "Loja",
+    "Pichincha",
+    "Tungurahua"
+  ],
+  Costa: [
+    "El Oro",
+    "Esmeraldas",
+    "Guayas",
+    "Manabí",
+    "Los Ríos",
+    "Santa Elena",
+    "Santo Domingo de los Tsáchilas"
+  ],
+  Amazonia: [
+    "Napo",
+    "Orellana",
+    "Pastaza",
+    "Sucumbíos",
+    "Morona Santiago",
+    "Zamora Chinchipe"
+  ],
+  Insular: ["Galápagos"]
+};
+
 export default function Usuarios() {
   const { data: usuariosDB = [], isLoading: loadingUsuarios } = useUsuarios();
   const [searchTerm, setSearchTerm] = useState("");
+  const [regionFilter, setRegionFilter] = useState("all");
   const [provinciaFilter, setProvinciaFilter] = useState("");
   const [cantonFilter, setCantonFilter] = useState("");
   const [open, setOpen] = useState(false);
@@ -91,6 +125,13 @@ export default function Usuarios() {
   const { data: provincias = [], isLoading: loadingProvincias } = useProvincias();
   const { data: cantones = [], isLoading: loadingCantones } = useCantones();
   const asignarRol = useAsignarRol();
+
+  // Provincias filtradas por región (para selects)
+  const provinciasFiltradasPorRegion = useMemo(() => {
+    if (!regionFilter || regionFilter === "all") return provincias;
+    const lista = REGION_MAP[regionFilter] || [];
+    return provincias.filter((p: any) => lista.includes(p.nombre));
+  }, [regionFilter, provincias]);
 
   // Filtrar cantones por provincia seleccionada para filtros
   const cantonesFiltrados = useMemo(() => {
@@ -184,7 +225,7 @@ export default function Usuarios() {
   };
 
   const correosExistentes = useMemo(
-    () => new Set(usuariosDB.map((u: any) => u.email.toLowerCase())),
+    () => new Set(usuariosDB.map((u: any) => (u.email || "").toLowerCase())),
     [usuariosDB]
   );
 
@@ -194,15 +235,23 @@ export default function Usuarios() {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       const nombreCompleto = `${usuario.nombres} ${usuario.apellidos}`.toLowerCase();
+      const identificador = (usuario.identificador || String(usuario.id || "")).toLowerCase();
       const matchesSearch = 
-        usuario.identificador.toLowerCase().includes(searchLower) ||
+        identificador.includes(searchLower) ||
         nombreCompleto.includes(searchLower) ||
         (usuario.cedula && usuario.cedula.includes(searchTerm));
       
       if (!matchesSearch) return false;
     }
     
-    // Filtro por provincia
+    // Filtro por región / provincia
+    if (regionFilter && regionFilter !== "all") {
+      // si hay region, aseguramos que la provincia del usuario pertenece a la región seleccionada
+      const lista = REGION_MAP[regionFilter] || [];
+      if (usuario.provincia?.nombre && !lista.includes(usuario.provincia.nombre)) {
+        return false;
+      }
+    }
     if (provinciaFilter && provinciaFilter !== "all" && usuario.provincia_id !== provinciaFilter) {
       return false;
     }
@@ -219,7 +268,7 @@ export default function Usuarios() {
     try {
       // Validación de duplicado (case-insensitive)
       const esMismoCorreo = (email: string) =>
-        editando && editando.email.toLowerCase() === email.toLowerCase();
+        editando && (editando.email || "").toLowerCase() === email.toLowerCase();
 
       if (correosExistentes.has(values.email.toLowerCase()) && !esMismoCorreo(values.email)) {
         form.setError("email", {
@@ -230,17 +279,17 @@ export default function Usuarios() {
       }
 
       if (editando) {
-        // Actualizar usuario existente
+        // Actualizar usuario existente -> nueva tabla "usuarios"
         const { error } = await supabase
-          .from("profiles")
+          .from("usuarios")
           .update({
             nombres: values.nombres,
             apellidos: values.apellidos,
             email: values.email,
             telefono: values.telefono || null,
             cedula: values.cedula || null,
-            provincia_id: values.provincia_id || null,
-            canton_id: values.canton_id || null,
+            provincia_id: values.provincia_id ? Number(values.provincia_id) : null,
+            canton_id: values.canton_id ? Number(values.canton_id) : null,
             direccion: values.direccion || null,
           })
           .eq("id", editando.id);
@@ -260,7 +309,7 @@ export default function Usuarios() {
           description: `${values.nombres} ${values.apellidos} fue editado.` 
         });
       } else {
-        // Crear nuevo usuario
+        // Crear nuevo usuario: si sigues creando con auth, mantengo auth.signUp; luego actualizo tabla "usuarios"
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: values.email,
           password: Math.random().toString(36).slice(-8), // Contraseña temporal
@@ -276,16 +325,23 @@ export default function Usuarios() {
 
         if (authError) throw authError;
 
-        // Actualizar el perfil con los datos adicionales
+        // Actualizar el registro en la tabla usuarios (si tu flujo requiere crear fila manualmente)
         if (authData.user) {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .update({
-              provincia_id: values.provincia_id || null,
-              canton_id: values.canton_id || null,
-              direccion: values.direccion || null,
-            })
-            .eq("id", authData.user.id);
+        // intenta actualizar por id; si en tu nueva BD la columna es integer y no coincide con auth id, crea la fila en vez de update
+        const { error: profileError } = await supabase
+          .from("usuarios")
+          .upsert({
+            auth_id: authData.user.id,
+            nombres: values.nombres,
+            apellidos: values.apellidos,
+            email: values.email,
+            telefono: values.telefono || null,
+            cedula: values.cedula || null,
+            provincia_id: values.provincia_id ? Number(values.provincia_id) : null,
+            canton_id: values.canton_id ? Number(values.canton_id) : null,
+            direccion: values.direccion || null,
+          }, { onConflict: "id" })
+          .select();
 
           if (profileError) throw profileError;
 
@@ -317,6 +373,7 @@ export default function Usuarios() {
 
   const limpiarFiltros = () => {
     setSearchTerm("");
+    setRegionFilter("");
     setProvinciaFilter("");
     setCantonFilter("");
   };
@@ -436,7 +493,7 @@ export default function Usuarios() {
                               <SelectValue placeholder="Selecciona provincia" />
                             </SelectTrigger>
                             <SelectContent className="z-50">
-                              {provincias.map((p: any) => (
+                              {provinciasFiltradasPorRegion.map((p: any) => (
                                 <SelectItem key={p.id} value={p.id}>
                                   {p.nombre}
                                 </SelectItem>
@@ -535,7 +592,7 @@ export default function Usuarios() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -546,13 +603,26 @@ export default function Usuarios() {
               />
             </div>
 
+            <Select value={regionFilter} onValueChange={(v) => { setRegionFilter(v); setProvinciaFilter(""); }} disabled={loadingProvincias}>
+              <SelectTrigger>
+                <SelectValue placeholder="Región" />
+              </SelectTrigger>
+              <SelectContent className="z-50">
+                <SelectItem value="all">Todas las regiones</SelectItem>
+                <SelectItem value="Sierra">Sierra</SelectItem>
+                <SelectItem value="Costa">Costa</SelectItem>
+                <SelectItem value="Amazonia">Amazonía</SelectItem>
+                <SelectItem value="Insular">Insular</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={provinciaFilter} onValueChange={setProvinciaFilter} disabled={loadingProvincias}>
               <SelectTrigger>
                 <SelectValue placeholder="Provincia" />
               </SelectTrigger>
               <SelectContent className="z-50">
                 <SelectItem value="all">Todas las provincias</SelectItem>
-                {provincias.map((provincia: any) => (
+                {provinciasFiltradasPorRegion.map((provincia: any) => (
                   <SelectItem key={provincia.id} value={provincia.id}>{provincia.nombre}</SelectItem>
                 ))}
               </SelectContent>
@@ -609,7 +679,7 @@ export default function Usuarios() {
               <TableBody>
                 {usuariosFiltrados.map((usuario: any) => (
                   <TableRow key={usuario.id}>
-                    <TableCell className="font-medium">{usuario.identificador}</TableCell>
+                    <TableCell className="font-medium">{usuario.identificador || usuario.id}</TableCell>
                     <TableCell>{usuario.nombres} {usuario.apellidos}</TableCell>
                     <TableCell>{usuario.email}</TableCell>
                     <TableCell>{usuario.telefono || "—"}</TableCell>
