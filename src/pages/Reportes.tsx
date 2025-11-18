@@ -62,6 +62,14 @@ import {
 
 const Reportes = () => {
   const { toast } = useToast();
+  const pieColors = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-6))",
+  ];
 
   // Filtros de fechas
   const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 7));
@@ -426,9 +434,11 @@ const handleExport = () => {
                   config={{
                     turnos: {
                       label: "Turnos",
+                      color: "hsl(var(--chart-1))",
                     },
                     completados: {
                       label: "Completados",
+                      color: "hsl(var(--chart-2))",
                     },
                   }}
                   className="h-72"
@@ -445,8 +455,8 @@ const handleExport = () => {
                       <YAxis />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
-                      <Bar dataKey="turnos" name="Turnos" />
-                      <Bar dataKey="completados" name="Completados" />
+                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
+                      <Bar dataKey="completados" name="Completados" fill="var(--color-completados)"/>
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -463,6 +473,7 @@ const handleExport = () => {
                   config={{
                     turnos: {
                       label: "Turnos",
+                      color: "hsl(var(--chart-1))",
                     },
                   }}
                   className="h-72 w-full md:w-1/2"
@@ -478,7 +489,7 @@ const handleExport = () => {
                         label
                       >
                         {distribucionCategorias.map((c, index) => (
-                          <Cell key={index} />
+                          <Cell key={index} fill={pieColors[index % pieColors.length]}/>
                         ))}
                       </Pie>
                     </PieChart>
@@ -512,7 +523,7 @@ const handleExport = () => {
               <CardContent>
                 <ChartContainer
                   config={{
-                    turnos: { label: "Turnos" },
+                    turnos: { label: "Turnos" , color:"hsl(var(--chart-1))"},
                     eficiencia: { label: "Eficiencia %" },
                   }}
                   className="h-72"
@@ -524,7 +535,7 @@ const handleExport = () => {
                       <YAxis />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
-                      <Bar dataKey="turnos" name="Turnos" />
+                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -538,7 +549,7 @@ const handleExport = () => {
               <CardContent>
                 <ChartContainer
                   config={{
-                    turnos: { label: "Turnos" },
+                    turnos: { label: "Turnos", color: "hsl(var(--chart-1))"},
                   }}
                   className="h-72"
                 >
@@ -549,7 +560,7 @@ const handleExport = () => {
                       <YAxis />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
-                      <Bar dataKey="turnos" name="Turnos" />
+                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -565,7 +576,7 @@ const handleExport = () => {
             <CardContent>
               <ChartContainer
                 config={{
-                  tiempo: { label: "Tiempo de espera (min)" },
+                  tiempo: { label: "Tiempo de espera (min)", color: "hsl(var(--chart-1))"},
                 }}
                 className="h-72"
               >
@@ -580,6 +591,9 @@ const handleExport = () => {
                       type="monotone"
                       dataKey="tiempo"
                       name="Espera promedio (min)"
+                      stroke="var(--color-tiempo)"
+                      strokeWidth={2}
+                      dot={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>
