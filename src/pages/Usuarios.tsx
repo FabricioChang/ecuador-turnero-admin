@@ -246,11 +246,7 @@ export default function Usuarios() {
     
     // Filtro por región / provincia
     if (regionFilter && regionFilter !== "all") {
-<<<<<<< HEAD
       // si hay region, aseguramos que la provincia del usuario pertenece a la región seleccionada
-=======
-      // si hay región, aseguramos que la provincia del usuario pertenece a la región seleccionada
->>>>>>> 5024993d3084a9e2e6ec43349cd8bc7a0730b1ab
       const lista = REGION_MAP[regionFilter] || [];
       if (usuario.provincia?.nombre && !lista.includes(usuario.provincia.nombre)) {
         return false;
