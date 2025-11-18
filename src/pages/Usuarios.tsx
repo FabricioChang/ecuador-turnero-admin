@@ -114,7 +114,7 @@ const REGION_MAP: Record<string, string[]> = {
 export default function Usuarios() {
   const { data: usuariosDB = [], isLoading: loadingUsuarios } = useUsuarios();
   const [searchTerm, setSearchTerm] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState("all");
   const [provinciaFilter, setProvinciaFilter] = useState("");
   const [cantonFilter, setCantonFilter] = useState("");
   const [open, setOpen] = useState(false);
@@ -128,7 +128,7 @@ export default function Usuarios() {
 
   // Provincias filtradas por región (para selects)
   const provinciasFiltradasPorRegion = useMemo(() => {
-    if (!regionFilter) return provincias;
+    if (!regionFilter || regionFilter === "all") return provincias;
     const lista = REGION_MAP[regionFilter] || [];
     return provincias.filter((p: any) => lista.includes(p.nombre));
   }, [regionFilter, provincias]);
@@ -208,7 +208,7 @@ export default function Usuarios() {
 
   const onEditar = (u: any) => {
     setEditando(u);
-    setProvinciaSeleccionada(String(u.provincia_id || ""));
+    setProvinciaSeleccionada(u.provincia_id || "");
     const userRole = u.user_roles?.[0]?.role || undefined;
     form.reset({
       nombres: u.nombres,
@@ -216,8 +216,8 @@ export default function Usuarios() {
       email: u.email,
       telefono: u.telefono || "",
       cedula: u.cedula || "",
-      provincia_id: u.provincia_id ? String(u.provincia_id) : "",
-      canton_id: u.canton_id ? String(u.canton_id) : "",
+      provincia_id: u.provincia_id || "",
+      canton_id: u.canton_id || "",
       direccion: u.direccion || "",
       role: userRole as any,
     });
@@ -245,10 +245,12 @@ export default function Usuarios() {
     }
     
     // Filtro por región / provincia
-    if (regionFilter) {
-      // si hay region, aseguramos que la provincia del usuario pertenece a la región seleccionada
+    if (regionFilter && regionFilter !== "all") {
+      // si hay región, aseguramos que la provincia del usuario pertenece a la región seleccionada
       const lista = REGION_MAP[regionFilter] || [];
-      if (usuario.provincia?.nombre && !lista.includes(usuario.provincia.nombre)) return false;
+      if (usuario.provincia?.nombre && !lista.includes(usuario.provincia.nombre)) {
+        return false;
+      }
     }
     if (provinciaFilter && provinciaFilter !== "all" && usuario.provincia_id !== provinciaFilter) {
       return false;
@@ -606,7 +608,7 @@ export default function Usuarios() {
                 <SelectValue placeholder="Región" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                <SelectItem value="">Todas las regiones</SelectItem>
+                <SelectItem value="all">Todas las regiones</SelectItem>
                 <SelectItem value="Sierra">Sierra</SelectItem>
                 <SelectItem value="Costa">Costa</SelectItem>
                 <SelectItem value="Amazonia">Amazonía</SelectItem>

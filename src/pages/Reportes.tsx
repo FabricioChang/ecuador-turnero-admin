@@ -63,6 +63,16 @@ import {
 const Reportes = () => {
   const { toast } = useToast();
 
+  const pieColors = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-6))",
+  ];
+
+
   // Filtros de fechas
   const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
@@ -426,9 +436,11 @@ const handleExport = () => {
                   config={{
                     turnos: {
                       label: "Turnos",
+                      color: "hsl(var(--chart-1))",
                     },
                     completados: {
                       label: "Completados",
+                      color: "hsl(var(--chart-2))",
                     },
                   }}
                   className="h-72"
@@ -445,8 +457,8 @@ const handleExport = () => {
                       <YAxis />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
-                      <Bar dataKey="turnos" name="Turnos" />
-                      <Bar dataKey="completados" name="Completados" />
+                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)" />
+                      <Bar dataKey="completados" name="Completados" fill="var(--color-completados)"/>
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
