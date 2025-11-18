@@ -208,7 +208,7 @@ export default function Usuarios() {
 
   const onEditar = (u: any) => {
     setEditando(u);
-    setProvinciaSeleccionada(String(u.provincia_id || ""));
+    setProvinciaSeleccionada(u.provincia_id || "");
     const userRole = u.user_roles?.[0]?.role || undefined;
     form.reset({
       nombres: u.nombres,
@@ -216,8 +216,8 @@ export default function Usuarios() {
       email: u.email,
       telefono: u.telefono || "",
       cedula: u.cedula || "",
-      provincia_id: u.provincia_id ? String(u.provincia_id) : "",
-      canton_id: u.canton_id ? String(u.canton_id) : "",
+      provincia_id: u.provincia_id || "",
+      canton_id: u.canton_id || "",
       direccion: u.direccion || "",
       role: userRole as any,
     });
@@ -246,9 +246,15 @@ export default function Usuarios() {
     
     // Filtro por región / provincia
     if (regionFilter && regionFilter !== "all") {
+<<<<<<< HEAD
       // si hay region, aseguramos que la provincia del usuario pertenece a la región seleccionada
+=======
+      // si hay región, aseguramos que la provincia del usuario pertenece a la región seleccionada
+>>>>>>> 5024993d3084a9e2e6ec43349cd8bc7a0730b1ab
       const lista = REGION_MAP[regionFilter] || [];
-      if (usuario.provincia?.nombre && !lista.includes(usuario.provincia.nombre)) return false;
+      if (usuario.provincia?.nombre && !lista.includes(usuario.provincia.nombre)) {
+        return false;
+      }
     }
     if (provinciaFilter && provinciaFilter !== "all" && usuario.provincia_id !== provinciaFilter) {
       return false;

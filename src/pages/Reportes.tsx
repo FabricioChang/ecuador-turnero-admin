@@ -71,6 +71,16 @@ const Reportes = () => {
     "hsl(var(--chart-6))",
   ];
 
+  const pieColors = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-6))",
+  ];
+
+
   // Filtros de fechas
   const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
@@ -455,7 +465,11 @@ const handleExport = () => {
                       <YAxis />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
+<<<<<<< HEAD
                       <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
+=======
+                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)" />
+>>>>>>> 5024993d3084a9e2e6ec43349cd8bc7a0730b1ab
                       <Bar dataKey="completados" name="Completados" fill="var(--color-completados)"/>
                     </BarChart>
                   </ResponsiveContainer>
