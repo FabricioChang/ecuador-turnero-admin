@@ -13,13 +13,12 @@ export const useCategorias = (sucursalId?: string) => {
     queryFn: async () => {
       if (!cuenta?.id) return [];
       
-      let query = supabaseExternal
+      const { data, error } = await (supabaseExternal as any)
         .from("categoria")
         .select("*")
         .eq("cuenta_id", cuenta.id)
         .order("nombre", { ascending: true });
 
-      const { data, error } = await query;
       if (error) throw error;
       return data as CategoriaRow[];
     },
