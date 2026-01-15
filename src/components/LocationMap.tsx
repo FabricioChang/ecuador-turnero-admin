@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
-import * as L from "leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
 import { MapPin, Crosshair, Loader2 } from "lucide-react";
 
 // Fix default marker icon
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
+const defaultIcon = L.icon({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
 });
 
 // Ecuador boundaries
@@ -49,7 +52,7 @@ function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number,
 }
 
 // Component to recenter map
-function MapRecenter({ position }: { position: L.LatLngExpression | null }) {
+function MapRecenter({ position }: { position: [number, number] | null }) {
   const map = useMap();
   
   useEffect(() => {
@@ -61,15 +64,15 @@ function MapRecenter({ position }: { position: L.LatLngExpression | null }) {
   return null;
 }
 
-export const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapProps) => {
-  const [markerPosition, setMarkerPosition] = useState<L.LatLngExpression | null>(
+const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapProps) => {
+  const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
     initialPosition ? [initialPosition.lat, initialPosition.lng] : null
   );
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
 
   // Reverse geocode using Nominatim (free OSM service)
-  const reverseGeocode = async (lat: number, lng: number): Promise<LocationData> => {
+  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<LocationData> => {
     setIsGeocoding(true);
     try {
       const response = await fetch(
@@ -87,10 +90,10 @@ export const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapPr
       ].filter(Boolean).join(" ").trim() || data.display_name?.split(",")[0] || "";
       
       // Map state/province to Ecuador provinces
-      let provincia = address.state || address.province || address.region || "";
+      const provincia = address.state || address.province || address.region || "";
       
       // Map city/town
-      let ciudad = address.city || address.town || address.municipality || address.village || address.county || "";
+      const ciudad = address.city || address.town || address.municipality || address.village || address.county || "";
       
       return {
         lat,
@@ -111,15 +114,15 @@ export const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapPr
     } finally {
       setIsGeocoding(false);
     }
-  };
+  }, []);
 
-  const handleMapClick = async (lat: number, lng: number) => {
+  const handleMapClick = useCallback(async (lat: number, lng: number) => {
     setMarkerPosition([lat, lng]);
     const locationData = await reverseGeocode(lat, lng);
     onLocationSelect(locationData);
-  };
+  }, [reverseGeocode, onLocationSelect]);
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       alert("La geolocalización no está disponible en este navegador");
       return;
@@ -147,7 +150,7 @@ export const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapPr
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  };
+  }, [reverseGeocode, onLocationSelect]);
 
   return (
     <div className="space-y-2">
@@ -197,7 +200,7 @@ export const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapPr
           <MapRecenter position={markerPosition} />
           
           {markerPosition && (
-            <Marker position={markerPosition} />
+            <Marker position={markerPosition} icon={defaultIcon} />
           )}
         </MapContainer>
       </div>
