@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Monitor, Wifi, Battery, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRegiones } from "@/hooks/useRegiones";
-import { useProvincias } from "@/hooks/useProvincias";
-import { useCantones } from "@/hooks/useCantones";
+import { useProvinciasDB } from "@/hooks/useProvinciasDB";
+import { useCantonesDB } from "@/hooks/useCantonesDB";
 import { useKioskos } from "@/hooks/useKioskos";
 import { useSucursales } from "@/hooks/useSucursales";
+import { Label } from "@/components/ui/label";
 
 const Kioskos = () => {
   const navigate = useNavigate();
@@ -22,10 +23,17 @@ const Kioskos = () => {
 
   // Cargar datos desde la base de datos
   const { regiones } = useRegiones();
-  const { data: provincias = [] } = useProvincias();
-  const { data: cantones = [] } = useCantones();
+  const { data: provincias = [] } = useProvinciasDB();
   const { data: kioskosDB = [], isLoading } = useKioskos();
   const { data: sucursales = [] } = useSucursales();
+
+  // Obtener el ID de provincia seleccionada
+  const provinciaSeleccionada = useMemo(() => {
+    return provincias.find((p: any) => p.nombre === provinciaFilter);
+  }, [provinciaFilter, provincias]);
+
+  // Cargar cantones filtrados por provincia
+  const { data: cantones = [] } = useCantonesDB(provinciaSeleccionada?.id);
 
   // Filtrar provincias por región seleccionada
   const provinciasFiltradas = useMemo(() => {
@@ -33,12 +41,6 @@ const Kioskos = () => {
     const regionSeleccionada = regiones.find(r => r.id === regionFilter);
     return provincias.filter((p: any) => regionSeleccionada?.provincias.includes(p.nombre));
   }, [regionFilter, provincias, regiones]);
-
-  // Filtrar cantones por provincia seleccionada
-  const cantonesFiltrados = useMemo(() => {
-    if (provinciaFilter === "all") return cantones;
-    return cantones.filter((c: any) => c.provincia === provinciaFilter);
-  }, [provinciaFilter, cantones]);
 
   // Filtrar sucursales jerárquicamente
   const sucursalesFiltradas = useMemo(() => {
@@ -157,89 +159,108 @@ const Kioskos = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <Select value={regionFilter} onValueChange={handleRegionChange}>
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Región" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light">
-                <SelectItem value="all">Todas las regiones</SelectItem>
-                {regiones.map(r => (
-                  <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Región</Label>
+              <Select value={regionFilter} onValueChange={handleRegionChange}>
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Región" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light">
+                  <SelectItem value="all">Todas las regiones</SelectItem>
+                  {regiones.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select 
-              value={provinciaFilter} 
-              onValueChange={handleProvinciaChange}
-              disabled={regionFilter === "all"}
-            >
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Provincia" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light z-50">
-                <SelectItem value="all">Todas las provincias</SelectItem>
-                {provinciasFiltradas.map((prov: any) => (
-                  <SelectItem key={prov.id} value={prov.nombre}>{prov.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Provincia</Label>
+              <Select 
+                value={provinciaFilter} 
+                onValueChange={handleProvinciaChange}
+                disabled={regionFilter === "all"}
+              >
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Provincia" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light z-50">
+                  <SelectItem value="all">Todas las provincias</SelectItem>
+                  {provinciasFiltradas.map((prov: any) => (
+                    <SelectItem key={prov.id} value={prov.nombre}>{prov.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select 
-              value={ciudadFilter} 
-              onValueChange={handleCiudadChange}
-              disabled={provinciaFilter === "all"}
-            >
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Ciudad" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light z-50">
-                <SelectItem value="all">Todas las ciudades</SelectItem>
-                {cantonesFiltrados.map((ciudad: any) => (
-                  <SelectItem key={ciudad.id} value={ciudad.nombre}>{ciudad.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Ciudad / Cantón</Label>
+              <Select 
+                value={ciudadFilter} 
+                onValueChange={handleCiudadChange}
+                disabled={provinciaFilter === "all"}
+              >
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Ciudad" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light z-50">
+                  <SelectItem value="all">Todas las ciudades</SelectItem>
+                  {cantones.map((ciudad: any) => (
+                    <SelectItem key={ciudad.id} value={ciudad.nombre}>{ciudad.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Sucursal" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light">
-                <SelectItem value="all">Todas las sucursales</SelectItem>
-                {sucursalesFiltradas.map((sucursal: any) => (
-                  <SelectItem key={sucursal.id} value={sucursal.id}>
-                    {sucursal.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Sucursal</Label>
+              <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Sucursal" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light">
+                  <SelectItem value="all">Todas las sucursales</SelectItem>
+                  {sucursalesFiltradas.map((sucursal: any) => (
+                    <SelectItem key={sucursal.id} value={sucursal.id}>
+                      {sucursal.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light">
-                <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="activo">Activo</SelectItem>
-                <SelectItem value="inactivo">Inactivo</SelectItem>
-                <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Estado</Label>
+              <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light">
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
+                  <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchTerm("");
-                setRegionFilter("all");
-                setProvinciaFilter("all");
-                setCiudadFilter("all");
-                setSucursalFilter("all");
-                setEstadoFilter("all");
-              }}
-            >
-              Limpiar
-            </Button>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs invisible">Acción</Label>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  setSearchTerm("");
+                  setRegionFilter("all");
+                  setProvinciaFilter("all");
+                  setCiudadFilter("all");
+                  setSucursalFilter("all");
+                  setEstadoFilter("all");
+                }}
+              >
+                Limpiar
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
