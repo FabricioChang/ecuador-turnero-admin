@@ -1,25 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabaseExternal } from "@/lib/supabase-external";
-import { useCuenta } from "@/contexts/CuentaContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+export interface CustomRole {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  identificador: string | null;
+  es_sistema: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const useCustomRoles = () => {
-  const { cuenta } = useCuenta();
-
   return useQuery({
-    queryKey: ["custom-roles", cuenta?.id],
+    queryKey: ["custom-roles"],
     queryFn: async () => {
-      if (!cuenta?.id) return [];
-
-      const { data, error } = await (supabaseExternal as any)
-        .from("rol")
+      const { data, error } = await supabase
+        .from("custom_roles")
         .select("*")
-        .eq("cuenta_id", cuenta.id);
+        .order("nombre", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as CustomRole[];
     },
-    enabled: !!cuenta?.id,
   });
 };
 
@@ -29,22 +33,66 @@ export const useCustomRolePermissions = (roleId?: string) => {
     queryFn: async () => {
       if (!roleId) return [];
 
-      const { data, error } = await (supabaseExternal as any)
-        .from("rol_permiso")
-        .select("permiso_id")
-        .eq("rol_id", roleId);
+      const { data, error } = await supabase
+        .from("custom_role_permissions")
+        .select("permission_id")
+        .eq("custom_role_id", roleId);
 
       if (error) throw error;
-      return (data || []).map((rp: any) => ({ permission_id: rp.permiso_id }));
+      return (data || []).map((rp) => rp.permission_id);
     },
     enabled: !!roleId,
+  });
+};
+
+export const useUpdateCustomRolePermissions = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ roleId, permissionIds }: { roleId: string; permissionIds: string[] }) => {
+      // Delete existing permissions for this role
+      const { error: deleteError } = await supabase
+        .from("custom_role_permissions")
+        .delete()
+        .eq("custom_role_id", roleId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new permissions
+      if (permissionIds.length > 0) {
+        const { error: insertError } = await supabase
+          .from("custom_role_permissions")
+          .insert(permissionIds.map(pid => ({
+            custom_role_id: roleId,
+            permission_id: pid
+          })));
+
+        if (insertError) throw insertError;
+      }
+
+      return true;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["custom-role-permissions", variables.roleId] });
+      toast({
+        title: "Permisos actualizados",
+        description: "Los permisos del rol han sido actualizados correctamente.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 };
 
 export const useCreateCustomRole = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { cuenta } = useCuenta();
 
   return useMutation({
     mutationFn: async ({ nombre, descripcion, permissionIds }: { 
@@ -52,13 +100,23 @@ export const useCreateCustomRole = () => {
       descripcion?: string;
       permissionIds?: string[];
     }) => {
-      if (!cuenta?.id) throw new Error("No cuenta selected");
+      // Get next identifier
+      const { data: roles } = await supabase
+        .from("custom_roles")
+        .select("identificador")
+        .order("identificador", { ascending: false })
+        .limit(1);
+      
+      const lastNum = roles?.[0]?.identificador?.match(/ROL-(\d+)/)?.[1] || "000";
+      const nextNum = String(parseInt(lastNum) + 1).padStart(3, "0");
+      const identificador = `ROL-${nextNum}`;
 
-      const { data: rol, error } = await (supabaseExternal as any)
-        .from("rol")
+      const { data: rol, error } = await supabase
+        .from("custom_roles")
         .insert({
-          cuenta_id: cuenta.id,
           nombre,
+          descripcion: descripcion || null,
+          identificador,
           es_sistema: false
         })
         .select()
@@ -68,11 +126,11 @@ export const useCreateCustomRole = () => {
 
       // Insert permissions if provided
       if (permissionIds && permissionIds.length > 0 && rol) {
-        await (supabaseExternal as any)
-          .from("rol_permiso")
+        await supabase
+          .from("custom_role_permissions")
           .insert(permissionIds.map(pid => ({
-            rol_id: rol.id,
-            permiso_id: pid
+            custom_role_id: rol.id,
+            permission_id: pid
           })));
       }
 
@@ -95,41 +153,6 @@ export const useCreateCustomRole = () => {
   });
 };
 
-export const useUpdateCustomRole = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async ({ roleId, nombre, descripcion }: { 
-      roleId: string; 
-      nombre: string;
-      descripcion?: string;
-    }) => {
-      const { error } = await (supabaseExternal as any)
-        .from("rol")
-        .update({ nombre })
-        .eq("id", roleId);
-
-      if (error) throw error;
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["custom-roles"] });
-      toast({
-        title: "Rol actualizado",
-        description: "El rol ha sido actualizado correctamente.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-};
-
 export const useDeleteCustomRole = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -137,13 +160,13 @@ export const useDeleteCustomRole = () => {
   return useMutation({
     mutationFn: async (roleId: string) => {
       // Delete permissions first
-      await (supabaseExternal as any)
-        .from("rol_permiso")
+      await supabase
+        .from("custom_role_permissions")
         .delete()
-        .eq("rol_id", roleId);
+        .eq("custom_role_id", roleId);
 
-      const { error } = await (supabaseExternal as any)
-        .from("rol")
+      const { error } = await supabase
+        .from("custom_roles")
         .delete()
         .eq("id", roleId);
 
@@ -155,49 +178,6 @@ export const useDeleteCustomRole = () => {
       toast({
         title: "Rol eliminado",
         description: "El rol ha sido eliminado correctamente.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-};
-
-export const useUpdateCustomRolePermissions = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async ({ roleId, permissionIds }: { roleId: string; permissionIds: string[] }) => {
-      // Delete existing permissions
-      await (supabaseExternal as any)
-        .from("rol_permiso")
-        .delete()
-        .eq("rol_id", roleId);
-
-      // Insert new permissions
-      if (permissionIds.length > 0) {
-        const { error } = await (supabaseExternal as any)
-          .from("rol_permiso")
-          .insert(permissionIds.map(pid => ({
-            rol_id: roleId,
-            permiso_id: pid
-          })));
-
-        if (error) throw error;
-      }
-
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["custom-role-permissions"] });
-      toast({
-        title: "Permisos actualizados",
-        description: "Los permisos del rol han sido actualizados correctamente.",
       });
     },
     onError: (error: any) => {
