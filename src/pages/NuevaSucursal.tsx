@@ -66,7 +66,7 @@ const NuevaSucursal = () => {
   // Filtrar cantones por provincia seleccionada en el formulario
   const cantonesFiltrados = useMemo(() => {
     if (!formData.provincia_id) return [];
-    return (cantones.data || []).filter(c => c.provincia_id === formData.provincia_id);
+    return (cantones.data || []).filter((c: any) => c.provincia === formData.provincia_id);
   }, [formData.provincia_id, cantones.data]);
 
   const kioskosDisponibles: Kiosko[] = [

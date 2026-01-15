@@ -4,27 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, Play, Image, Calendar, CheckCircle, XCircle, Monitor, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRegiones } from "@/hooks/useRegiones";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
-import { useRegiones } from "@/hooks/useRegiones";
 import { useSucursales } from "@/hooks/useSucursales";
 import { usePantallas } from "@/hooks/usePantallas";
 import { usePublicidad } from "@/hooks/usePublicidad";
-
-interface PublicidadItem {
-  id: number;
-  nombre: string;
-  tipo: 'imagen' | 'video';
-  archivo: string;
-  duracion: number;
-  fecha: string;
-  estado: 'activo' | 'inactivo';
-}
 
 const Publicidad = () => {
   const { toast } = useToast();
@@ -34,16 +24,16 @@ const Publicidad = () => {
     duracion: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [selectedItem, setSelectedItem] = useState<PublicidadItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [selectedPantallas, setSelectedPantallas] = useState<string[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   
   // Filtros para el modal
   const [modalSearchTerm, setModalSearchTerm] = useState("");
-  const [modalRegionFilter, setModalRegionFilter] = useState("");
-  const [modalProvinciaFilter, setModalProvinciaFilter] = useState("");
-  const [modalCiudadFilter, setModalCiudadFilter] = useState("");
-  const [modalSucursalFilter, setModalSucursalFilter] = useState("");
+  const [modalRegionFilter, setModalRegionFilter] = useState("all");
+  const [modalProvinciaFilter, setModalProvinciaFilter] = useState("all");
+  const [modalCiudadFilter, setModalCiudadFilter] = useState("all");
+  const [modalSucursalFilter, setModalSucursalFilter] = useState("all");
   
   // Hooks para cargar datos de la BD
   const { regiones } = useRegiones();
@@ -51,73 +41,49 @@ const Publicidad = () => {
   const { data: cantones = [] } = useCantones();
   const { data: sucursalesDB = [] } = useSucursales();
   const { data: pantallasDB = [], isLoading: loadingPantallas } = usePantallas();
-  
-  // Load publicidad from database
   const { data: publicidadDB = [], isLoading: loadingPublicidad } = usePublicidad();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.nombre.trim()) {
       newErrors.nombre = "El nombre es requerido";
     }
-
     if (!formData.archivo) {
       newErrors.archivo = "Debe seleccionar un archivo";
-    } else {
-      const validExtensions = ['jpg', 'jpeg', 'png', 'mp4', 'avi', 'mov'];
-      const fileExtension = formData.archivo.name.split('.').pop()?.toLowerCase();
-      if (!fileExtension || !validExtensions.includes(fileExtension)) {
-        newErrors.archivo = "Formato no válido. Use: jpg, jpeg, png, mp4, avi, mov";
-      }
     }
-
     if (!formData.duracion) {
       newErrors.duracion = "La duración es requerida";
-    } else if (isNaN(Number(formData.duracion)) || Number(formData.duracion) <= 0) {
-      newErrors.duracion = "La duración debe ser un número mayor a 0";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (validateForm()) {
       toast({
         title: "Contenido agregado",
         description: "El contenido publicitario se ha subido correctamente",
       });
-      
       setFormData({ nombre: '', archivo: null, duracion: '' });
       setErrors({});
-      
-      // Reset file input
-      const fileInput = document.getElementById('archivo') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setFormData(prev => ({ ...prev, archivo: file }));
-    if (errors.archivo) {
-      setErrors(prev => ({ ...prev, archivo: '' }));
-    }
   };
 
-  const handleAssignToPantallas = (item: PublicidadItem) => {
+  const handleAssignToPantallas = (item: any) => {
     setSelectedItem(item);
     setSelectedPantallas([]);
     setIsAssignModalOpen(true);
-    // Reset filtros
     setModalSearchTerm("");
-    setModalRegionFilter("");
-    setModalProvinciaFilter("");
-    setModalCiudadFilter("");
-    setModalSucursalFilter("");
+    setModalRegionFilter("all");
+    setModalProvinciaFilter("all");
+    setModalCiudadFilter("all");
+    setModalSucursalFilter("all");
   };
 
   const confirmAssignment = () => {
@@ -129,12 +95,10 @@ const Publicidad = () => {
       });
       return;
     }
-
     toast({
       title: "Asignación completada",
       description: `Contenido asignado a ${selectedPantallas.length} pantalla(s)`,
     });
-    
     setIsAssignModalOpen(false);
     setSelectedItem(null);
     setSelectedPantallas([]);
@@ -150,50 +114,80 @@ const Publicidad = () => {
     });
   };
 
+  // Handlers para resetear filtros hijos
   const handleModalRegionChange = (value: string) => {
     setModalRegionFilter(value);
-    setModalProvinciaFilter("");
-    setModalCiudadFilter("");
+    setModalProvinciaFilter("all");
+    setModalCiudadFilter("all");
+    setModalSucursalFilter("all");
   };
 
   const handleModalProvinciaChange = (value: string) => {
     setModalProvinciaFilter(value);
-    setModalCiudadFilter("");
+    setModalCiudadFilter("all");
+    setModalSucursalFilter("all");
   };
 
+  const handleModalCiudadChange = (value: string) => {
+    setModalCiudadFilter(value);
+    setModalSucursalFilter("all");
+  };
+
+  // Filtrar provincias por región
   const provinciasFiltradas = useMemo(() => {
-    if (!modalRegionFilter) return provincias;
-    const regionSeleccionada = regiones.find((r: any) => r.id === modalRegionFilter);
-    return provincias.filter((p: any) => regionSeleccionada?.provincias.includes(p.nombre));
+    if (modalRegionFilter === "all") return provincias;
+    const regionData = regiones.find(r => r.id === modalRegionFilter);
+    if (!regionData) return provincias;
+    return provincias.filter((p: any) => regionData.provincias.includes(p.nombre));
   }, [modalRegionFilter, provincias, regiones]);
 
-  const cantonesFiltrados = useMemo(() => {
-    if (!modalProvinciaFilter) return cantones;
-    const provinciaSeleccionada = provincias.find((p: any) => p.nombre === modalProvinciaFilter);
-    return cantones.filter((c: any) => c.provincia_id === provinciaSeleccionada?.id);
-  }, [modalProvinciaFilter, cantones, provincias]);
+  // Filtrar ciudades por provincia
+  const ciudadesFiltradas = useMemo(() => {
+    if (modalProvinciaFilter === "all") return cantones;
+    return cantones.filter((c: any) => c.provincia === modalProvinciaFilter);
+  }, [modalProvinciaFilter, cantones]);
 
+  // Filtrar sucursales jerárquicamente
+  const sucursalesFiltradas = useMemo(() => {
+    let filtered = [...sucursalesDB];
+    
+    if (modalRegionFilter !== "all") {
+      const regionData = regiones.find(r => r.id === modalRegionFilter);
+      if (regionData) {
+        filtered = filtered.filter((s: any) => regionData.provincias.includes(s.provincia));
+      }
+    }
+    
+    if (modalProvinciaFilter !== "all") {
+      filtered = filtered.filter((s: any) => s.provincia === modalProvinciaFilter);
+    }
+    
+    if (modalCiudadFilter !== "all") {
+      filtered = filtered.filter((s: any) => s.ciudad === modalCiudadFilter);
+    }
+    
+    return filtered;
+  }, [sucursalesDB, modalRegionFilter, modalProvinciaFilter, modalCiudadFilter, regiones]);
+
+  // Filtrar pantallas jerárquicamente
   const filteredPantallas = useMemo(() => {
     return pantallasDB.filter((pantalla: any) => {
       const matchesSearch = 
         pantalla.identificador?.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
         pantalla.nombre?.toLowerCase().includes(modalSearchTerm.toLowerCase());
       
-      const matchesRegion = !modalRegionFilter || modalRegionFilter === "all" || 
-        regiones.find((r: any) => r.id === modalRegionFilter)?.provincias.includes(pantalla.sucursal?.provincia?.nombre);
+      // Filtro por sucursal directa
+      if (modalSucursalFilter !== "all") {
+        return matchesSearch && pantalla.sucursal_id === modalSucursalFilter;
+      }
       
-      const matchesProvincia = !modalProvinciaFilter || modalProvinciaFilter === "all" || 
-        pantalla.sucursal?.provincia?.nombre === modalProvinciaFilter;
+      // Filtros jerárquicos
+      const sucursalIds = sucursalesFiltradas.map((s: any) => s.id);
+      const matchesSucursal = sucursalIds.length === 0 || sucursalIds.includes(pantalla.sucursal_id);
       
-      const matchesCiudad = !modalCiudadFilter || modalCiudadFilter === "all" || 
-        pantalla.sucursal?.canton?.nombre === modalCiudadFilter;
-      
-      const matchesSucursal = !modalSucursalFilter || modalSucursalFilter === "all" || 
-        pantalla.sucursal?.nombre === modalSucursalFilter;
-      
-      return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesSucursal;
+      return matchesSearch && matchesSucursal;
     });
-  }, [pantallasDB, modalSearchTerm, modalRegionFilter, modalProvinciaFilter, modalCiudadFilter, modalSucursalFilter, regiones]);
+  }, [pantallasDB, modalSearchTerm, modalSucursalFilter, sucursalesFiltradas]);
 
   return (
     <div className="space-y-6">
@@ -220,10 +214,7 @@ const Publicidad = () => {
                 <Input
                   id="nombre"
                   value={formData.nombre}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, nombre: e.target.value }));
-                    if (errors.nombre) setErrors(prev => ({ ...prev, nombre: '' }));
-                  }}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
                   placeholder="Ej: Promoción Verano 2024"
                   className={`bg-admin-background border-admin-border-light ${errors.nombre ? 'border-red-500' : ''}`}
                 />
@@ -248,10 +239,7 @@ const Publicidad = () => {
                   id="duracion"
                   type="number"
                   value={formData.duracion}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, duracion: e.target.value }));
-                    if (errors.duracion) setErrors(prev => ({ ...prev, duracion: '' }));
-                  }}
+                  onChange={(e) => setFormData(prev => ({ ...prev, duracion: e.target.value }))}
                   placeholder="15"
                   min="1"
                   className={`bg-admin-background border-admin-border-light ${errors.duracion ? 'border-red-500' : ''}`}
@@ -271,81 +259,67 @@ const Publicidad = () => {
       {/* Tabla de contenidos */}
       <Card className="bg-admin-surface border-admin-border-light">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-admin-text-primary">Contenidos Publicitarios</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-admin-text-muted" />
-              <Input
-                placeholder="Buscar por nombre..."
-                className="pl-10 bg-admin-background border-admin-border-light"
-              />
-            </div>
-          </div>
+          <CardTitle className="text-admin-text-primary">Contenidos Publicitarios</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-admin-border-light">
-                <TableHead className="text-admin-text-muted">Nombre</TableHead>
-                <TableHead className="text-admin-text-muted">Tipo</TableHead>
-                <TableHead className="text-admin-text-muted">Duración</TableHead>
-                <TableHead className="text-admin-text-muted">Fecha</TableHead>
-                <TableHead className="text-admin-text-muted">Estado</TableHead>
-                <TableHead className="text-admin-text-muted">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {publicidadDB.map((item: any) => (
-                <TableRow key={item.id} className="border-admin-border-light">
-                  <TableCell className="text-admin-text-primary font-medium">
-                    <div className="flex items-center space-x-2">
-                      {item.tipo === 'imagen' ? (
-                        <Image className="h-4 w-4 text-admin-text-muted" />
-                      ) : (
-                        <Play className="h-4 w-4 text-admin-text-muted" />
-                      )}
-                      <span>{item.nombre}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-admin-text-secondary">
-                    <span className="capitalize">{item.tipo}</span>
-                  </TableCell>
-                  <TableCell className="text-admin-text-secondary">{item.duracion}s</TableCell>
-                  <TableCell className="text-admin-text-secondary">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4 text-admin-text-muted" />
-                      <span>{item.fecha}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-1">
-                      {item.estado === 'activo' ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-600" />
-                      )}
-                      <span className={`text-sm capitalize ${
-                        item.estado === 'activo' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {item.estado}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAssignToPantallas(item)}
-                      className="text-admin-text-primary"
-                    >
-                      <Monitor className="h-4 w-4 mr-1" />
-                      Asignar a Pantallas
-                    </Button>
-                  </TableCell>
+          {loadingPublicidad ? (
+            <p className="text-center py-8 text-admin-text-secondary">Cargando contenidos...</p>
+          ) : publicidadDB.length === 0 ? (
+            <p className="text-center py-8 text-admin-text-secondary">No hay contenidos publicitarios</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-admin-border-light">
+                  <TableHead className="text-admin-text-muted">Nombre</TableHead>
+                  <TableHead className="text-admin-text-muted">Tipo</TableHead>
+                  <TableHead className="text-admin-text-muted">Duración</TableHead>
+                  <TableHead className="text-admin-text-muted">Estado</TableHead>
+                  <TableHead className="text-admin-text-muted">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {publicidadDB.map((item: any) => (
+                  <TableRow key={item.id} className="border-admin-border-light">
+                    <TableCell className="text-admin-text-primary font-medium">
+                      <div className="flex items-center space-x-2">
+                        {item.tipo === 'imagen' ? (
+                          <Image className="h-4 w-4 text-admin-text-muted" />
+                        ) : (
+                          <Play className="h-4 w-4 text-admin-text-muted" />
+                        )}
+                        <span>{item.nombre}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-admin-text-secondary capitalize">{item.tipo}</TableCell>
+                    <TableCell className="text-admin-text-secondary">{item.duracion}s</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-1">
+                        {item.estado === 'activo' ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        )}
+                        <span className={`text-sm capitalize ${item.estado === 'activo' ? 'text-green-600' : 'text-red-600'}`}>
+                          {item.estado}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAssignToPantallas(item)}
+                        className="text-admin-text-primary"
+                      >
+                        <Monitor className="h-4 w-4 mr-1" />
+                        Asignar a Pantallas
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -389,17 +363,16 @@ const Publicidad = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-admin-surface border-admin-border-light z-[100]">
                       <SelectItem value="all">Todas las regiones</SelectItem>
-                      <SelectItem value="costa">Costa</SelectItem>
-                      <SelectItem value="sierra">Sierra</SelectItem>
-                      <SelectItem value="amazonia">Amazonía</SelectItem>
-                      <SelectItem value="galapagos">Galápagos</SelectItem>
+                      {regiones.map(r => (
+                        <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
                   <Select 
                     value={modalProvinciaFilter} 
                     onValueChange={handleModalProvinciaChange}
-                    disabled={!modalRegionFilter || modalRegionFilter === "all"}
+                    disabled={modalRegionFilter === "all"}
                   >
                     <SelectTrigger className="bg-admin-surface border-admin-border-light text-admin-text-primary">
                       <SelectValue placeholder="Provincia" />
@@ -414,16 +387,16 @@ const Publicidad = () => {
 
                   <Select 
                     value={modalCiudadFilter} 
-                    onValueChange={setModalCiudadFilter}
-                    disabled={!modalProvinciaFilter || modalProvinciaFilter === "all"}
+                    onValueChange={handleModalCiudadChange}
+                    disabled={modalProvinciaFilter === "all"}
                   >
                     <SelectTrigger className="bg-admin-surface border-admin-border-light text-admin-text-primary">
                       <SelectValue placeholder="Ciudad" />
                     </SelectTrigger>
                     <SelectContent className="bg-admin-surface border-admin-border-light z-[100]">
                       <SelectItem value="all">Todas las ciudades</SelectItem>
-                      {cantonesFiltrados.map((canton: any) => (
-                        <SelectItem key={canton.id} value={canton.nombre}>{canton.nombre}</SelectItem>
+                      {ciudadesFiltradas.map((c: any) => (
+                        <SelectItem key={c.id} value={c.nombre}>{c.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -434,75 +407,62 @@ const Publicidad = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-admin-surface border-admin-border-light z-[100]">
                       <SelectItem value="all">Todas las sucursales</SelectItem>
-                      {sucursalesDB.map((s: any) => (
-                        <SelectItem key={s.id} value={s.nombre}>{s.nombre}</SelectItem>
+                      {sucursalesFiltradas.map((s: any) => (
+                        <SelectItem key={s.id} value={s.id}>{s.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </CardContent>
             </Card>
-            
-            {loadingPantallas ? (
-              <div className="text-center py-8 text-admin-text-secondary">Cargando pantallas...</div>
-            ) : filteredPantallas.length === 0 ? (
-              <div className="text-center py-8 text-admin-text-secondary">No se encontraron pantallas con los filtros seleccionados</div>
-            ) : (
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {filteredPantallas.map((pantalla: any) => (
-                  <div
-                    key={pantalla.id}
-                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer ${
-                      pantalla.estado === 'activa' 
-                        ? 'border-admin-border-light bg-admin-background' 
-                        : 'border-admin-border-light bg-admin-surface opacity-50'
-                    }`}
-                    onClick={() => pantalla.estado === 'activa' && togglePantallaSelection(pantalla.id)}
-                  >
-                    <Checkbox
-                      id={`pantalla-${pantalla.id}`}
-                      checked={selectedPantallas.includes(pantalla.id)}
-                      onCheckedChange={(checked) => togglePantallaSelection(pantalla.id)}
-                      disabled={pantalla.estado === 'inactiva'}
-                    />
-                    <div className="flex-1">
-                      <label 
-                        htmlFor={`pantalla-${pantalla.id}`}
-                        className={`text-sm font-medium cursor-pointer ${
-                          pantalla.estado === 'activa' ? 'text-admin-text-primary' : 'text-admin-text-muted'
-                        }`}
-                      >
-                        {pantalla.identificador} - {pantalla.nombre}
-                      </label>
-                      <p className="text-xs text-admin-text-muted">
-                        {pantalla.sucursal?.nombre} - {pantalla.sucursal?.provincia?.nombre}, {pantalla.sucursal?.canton?.nombre}
-                      </p>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full capitalize ${
-                      pantalla.estado === 'activa' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {pantalla.estado}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsAssignModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={confirmAssignment}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Confirmar Asignación ({selectedPantallas.length})
-              </Button>
+            {/* Lista de pantallas */}
+            <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
+              {loadingPantallas ? (
+                <p className="text-center py-4 text-admin-text-secondary">Cargando pantallas...</p>
+              ) : filteredPantallas.length === 0 ? (
+                <p className="text-center py-4 text-admin-text-secondary">
+                  No se encontraron pantallas con los filtros seleccionados
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {filteredPantallas.map((pantalla: any) => (
+                    <div
+                      key={pantalla.id}
+                      className="flex items-center space-x-3 p-2 hover:bg-admin-bg rounded"
+                    >
+                      <Checkbox
+                        id={`pantalla-${pantalla.id}`}
+                        checked={selectedPantallas.includes(pantalla.id)}
+                        onCheckedChange={() => togglePantallaSelection(pantalla.id)}
+                      />
+                      <label
+                        htmlFor={`pantalla-${pantalla.id}`}
+                        className="flex-1 cursor-pointer"
+                      >
+                        <span className="font-medium text-admin-text-primary">{pantalla.nombre}</span>
+                        <span className="text-sm text-admin-text-secondary ml-2">
+                          ({pantalla.sucursal?.nombre || "Sin sucursal"})
+                        </span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-admin-text-secondary">
+                {selectedPantallas.length} pantalla(s) seleccionada(s)
+              </span>
+              <div className="space-x-2">
+                <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={confirmAssignment}>
+                  Confirmar Asignación
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
