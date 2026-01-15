@@ -12,6 +12,7 @@ const Categorias = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [prioridadFilter, setPrioridadFilter] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("");
 
   const { data: categoriasDB = [], isLoading } = useCategorias();
 
@@ -28,13 +29,17 @@ const Categorias = () => {
     return categorias.filter(categoria => {
       const matchesSearch = categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPrioridad = !prioridadFilter || categoria.prioridad === prioridadFilter;
-      return matchesSearch && matchesPrioridad;
+      const matchesEstado = !estadoFilter || 
+        (estadoFilter === "activo" && categoria.activo) || 
+        (estadoFilter === "inactivo" && !categoria.activo);
+      return matchesSearch && matchesPrioridad && matchesEstado;
     });
-  }, [categorias, searchTerm, prioridadFilter]);
+  }, [categorias, searchTerm, prioridadFilter, estadoFilter]);
 
   const clearFilters = () => {
     setSearchTerm("");
     setPrioridadFilter("");
+    setEstadoFilter("");
   };
 
   const handleVerDetalles = (id: string) => {
@@ -116,7 +121,7 @@ const Categorias = () => {
           </div>
 
           {/* Filter Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-admin-text-primary">Prioridad</Label>
               <Select value={prioridadFilter} onValueChange={setPrioridadFilter}>
@@ -126,6 +131,19 @@ const Categorias = () => {
                 <SelectContent>
                   <SelectItem value="preferencial">Preferencial</SelectItem>
                   <SelectItem value="regular">Regular</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-admin-text-primary">Estado</Label>
+              <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
