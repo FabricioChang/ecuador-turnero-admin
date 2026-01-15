@@ -18,9 +18,13 @@ export const useCreateSucursal = () => {
     }) => {
       if (!cuenta?.id) throw new Error("No hay cuenta seleccionada");
 
+      // Generate UUID for the new sucursal
+      const newId = crypto.randomUUID();
+
       const { data: result, error } = await (supabaseExternal as any)
         .from("sucursal")
         .insert({
+          id: newId,
           nombre: data.nombre,
           region: data.region || "",
           provincia: data.provincia || "",
