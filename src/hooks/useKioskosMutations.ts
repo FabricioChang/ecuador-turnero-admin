@@ -50,16 +50,21 @@ export const useUpdateKiosko = () => {
     mutationFn: async (data: {
       id: string;
       codigo?: string;
+      sucursal_id?: string;
       ubicacion?: string | null;
       estado?: string;
     }) => {
+      const updateData: any = {};
+      if (data.codigo !== undefined) updateData.codigo = data.codigo;
+      if (data.sucursal_id !== undefined) updateData.sucursal_id = data.sucursal_id;
+      if (data.ubicacion !== undefined) updateData.ubicacion = data.ubicacion;
+      if (data.estado !== undefined) {
+        updateData.estado = data.estado === 'mantenimiento' ? 'inactivo' : (data.estado as 'activo' | 'inactivo');
+      }
+
       const { error } = await (supabaseExternal as any)
         .from("kiosko")
-        .update({
-          codigo: data.codigo,
-          ubicacion: data.ubicacion,
-          estado: data.estado === 'mantenimiento' ? 'inactivo' : (data.estado as 'activo' | 'inactivo')
-        })
+        .update(updateData)
         .eq("id", data.id);
 
       if (error) throw error;
