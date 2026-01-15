@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Search, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Shield } from "lucide-react";
 import { useUsuarios, type MiembroConUsuario } from "@/hooks/useUsuarios";
 import { useCreateUsuario, useDeleteUsuarioMiembro } from "@/hooks/useUsuariosMutations";
+import { useRolesByCuenta, getUserMaxRoleLevel, canAssignRole } from "@/hooks/useRolesByCuenta";
+import { useCuenta } from "@/contexts/CuentaContext";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -18,6 +20,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -27,22 +36,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EditUsuarioDialog } from "@/components/EditUsuarioDialog";
 
 export default function Usuarios() {
   const { data: miembrosDB = [], isLoading } = useUsuarios();
+  const { data: roles = [] } = useRolesByCuenta();
+  const { usuario: currentUser, miembro: currentMiembro } = useCuenta();
   const createUsuario = useCreateUsuario();
   const deleteUsuario = useDeleteUsuarioMiembro();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedMiembro, setSelectedMiembro] = useState<MiembroConUsuario | null>(null);
   const { toast } = useToast();
+
+  // Calculate current user's permission level
+  const currentUserLevel = getUserMaxRoleLevel(
+    currentMiembro ? [] : [], // Would need to fetch current user's roles
+    currentUser?.super_admin || false
+  );
+  const isSuperAdmin = currentUser?.super_admin || false;
 
   // Form state
   const [formData, setFormData] = useState({
     email: "",
     nombre: "",
     password: "",
+    rolId: "",
   });
 
   useEffect(() => {
@@ -76,7 +97,7 @@ export default function Usuarios() {
         description: "El usuario ha sido agregado exitosamente",
       });
       setIsDialogOpen(false);
-      setFormData({ email: "", nombre: "", password: "" });
+      setFormData({ email: "", nombre: "", password: "", rolId: "" });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -196,7 +217,18 @@ export default function Usuarios() {
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedMiembro(miembro);
+                            setEditDialogOpen(true);
+                          }}
+                          title="Editar usuario"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -204,6 +236,7 @@ export default function Usuarios() {
                             setSelectedMiembro(miembro);
                             setDeleteDialogOpen(true);
                           }}
+                          title="Eliminar usuario"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -263,6 +296,29 @@ export default function Usuarios() {
                   }
                 />
               </div>
+              {/* Selector de rol inicial */}
+              {roles.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="rolId">Rol Inicial (opcional)</Label>
+                  <Select
+                    value={formData.rolId}
+                    onValueChange={(value) => setFormData({ ...formData, rolId: value })}
+                  >
+                    <SelectTrigger id="rolId">
+                      <SelectValue placeholder="Seleccionar rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles
+                        .filter(role => isSuperAdmin || canAssignRole(currentUserLevel, role.nombre))
+                        .map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.nombre}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button
@@ -301,6 +357,13 @@ export default function Usuarios() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog para editar usuario */}
+      <EditUsuarioDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        miembro={selectedMiembro}
+      />
     </main>
   );
 }

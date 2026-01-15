@@ -51,6 +51,11 @@ const Login = () => {
       if (usuarioError) throw usuarioError;
       if (!usuarioData) throw new Error("No existe un usuario con ese email");
 
+      // Validate password - compare with stored pass_hash
+      if (usuarioData.pass_hash !== password) {
+        throw new Error("Contraseña incorrecta");
+      }
+
       const { data: miembroData, error: miembroError } = await (supabaseExternal as any)
         .from("miembro_cuenta").select("*").eq("usuario_id", usuarioData.id).eq("cuenta_id", selectedCuenta.id).eq("estado", "activo").maybeSingle();
 

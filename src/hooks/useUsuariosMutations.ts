@@ -1,16 +1,30 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal } from "@/lib/supabase-external";
 import { useCuenta } from "@/contexts/CuentaContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateUsuarioData {
   email: string;
   nombre: string;
   password: string;
+  rolId?: string;
+}
+
+interface UpdateUsuarioData {
+  usuarioId: string;
+  miembroId: string;
+  email?: string;
+  nombre?: string;
+  password?: string;
+  estado?: string;
+  superAdmin?: boolean;
+  rolIds?: string[];
 }
 
 export const useCreateUsuario = () => {
   const queryClient = useQueryClient();
   const { cuenta } = useCuenta();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (data: CreateUsuarioData) => {
@@ -34,7 +48,7 @@ export const useCreateUsuario = () => {
           .insert({
             email: data.email,
             nombre: data.nombre,
-            pass_hash: data.password, // In production, this should be hashed server-side
+            pass_hash: data.password,
             super_admin: false,
           })
           .select("id")
@@ -57,20 +71,106 @@ export const useCreateUsuario = () => {
       }
 
       // Add user as member of the account
-      const { error: memberError } = await (supabaseExternal as any)
+      const { data: newMember, error: memberError } = await (supabaseExternal as any)
         .from("miembro_cuenta")
         .insert({
           usuario_id: usuarioId,
           cuenta_id: cuenta.id,
           estado: "activo",
-        });
+        })
+        .select("id")
+        .single();
 
       if (memberError) throw memberError;
 
-      return { usuarioId };
+      // If a role was provided, assign it
+      if (data.rolId && newMember?.id) {
+        await (supabaseExternal as any)
+          .from("usuario_rol")
+          .insert({
+            miembro_id: newMember.id,
+            rol_id: data.rolId,
+          });
+      }
+
+      return { usuarioId, miembroId: newMember?.id };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["usuarios_miembros"] });
+    },
+  });
+};
+
+export const useUpdateUsuario = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: UpdateUsuarioData) => {
+      // Update usuario_admin if needed
+      const updateFields: Record<string, any> = {};
+      if (data.email !== undefined) updateFields.email = data.email;
+      if (data.nombre !== undefined) updateFields.nombre = data.nombre;
+      if (data.password) updateFields.pass_hash = data.password;
+      if (data.superAdmin !== undefined) updateFields.super_admin = data.superAdmin;
+
+      if (Object.keys(updateFields).length > 0) {
+        const { error: updateError } = await (supabaseExternal as any)
+          .from("usuario_admin")
+          .update(updateFields)
+          .eq("id", data.usuarioId);
+
+        if (updateError) throw updateError;
+      }
+
+      // Update miembro_cuenta estado if needed
+      if (data.estado !== undefined) {
+        const { error: estadoError } = await (supabaseExternal as any)
+          .from("miembro_cuenta")
+          .update({ estado: data.estado })
+          .eq("id", data.miembroId);
+
+        if (estadoError) throw estadoError;
+      }
+
+      // Update roles if provided
+      if (data.rolIds !== undefined) {
+        // Delete existing roles
+        await (supabaseExternal as any)
+          .from("usuario_rol")
+          .delete()
+          .eq("miembro_id", data.miembroId);
+
+        // Insert new roles
+        if (data.rolIds.length > 0) {
+          const rolInserts = data.rolIds.map(rolId => ({
+            miembro_id: data.miembroId,
+            rol_id: rolId,
+          }));
+
+          const { error: rolError } = await (supabaseExternal as any)
+            .from("usuario_rol")
+            .insert(rolInserts);
+
+          if (rolError) throw rolError;
+        }
+      }
+
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["usuarios_miembros"] });
+      toast({
+        title: "Usuario actualizado",
+        description: "Los datos del usuario han sido actualizados correctamente.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar el usuario",
+        variant: "destructive",
+      });
     },
   });
 };
@@ -80,6 +180,13 @@ export const useDeleteUsuarioMiembro = () => {
 
   return useMutation({
     mutationFn: async (miembroId: string) => {
+      // First delete user roles
+      await (supabaseExternal as any)
+        .from("usuario_rol")
+        .delete()
+        .eq("miembro_id", miembroId);
+
+      // Then delete the member
       const { error } = await (supabaseExternal as any)
         .from("miembro_cuenta")
         .delete()
