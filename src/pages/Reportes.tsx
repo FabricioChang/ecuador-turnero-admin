@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -25,7 +25,6 @@ import {
   TrendingUp,
   Clock,
   Users,
-  BarChart3,
   AlertCircle,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
@@ -54,6 +53,9 @@ import { useReportes } from "@/hooks/useReportes";
 import { useSucursales } from "@/hooks/useSucursales";
 import { useKioskos } from "@/hooks/useKioskos";
 import { useCategorias } from "@/hooks/useCategorias";
+import { useRegiones } from "@/hooks/useRegiones";
+import { useProvincias } from "@/hooks/useProvincias";
+import { useCantones } from "@/hooks/useCantones";
 import { useToast } from "@/hooks/use-toast";
 import {
   exportToCSV,
@@ -76,15 +78,94 @@ const Reportes = () => {
   const [dateFrom, setDateFrom] = useState<Date>(subDays(new Date(), 7));
   const [dateTo, setDateTo] = useState<Date>(new Date());
 
-  // Filtros de entidades
+  // Filtros jerárquicos
+  const [selectedRegion, setSelectedRegion] = useState<string>("all");
+  const [selectedProvincia, setSelectedProvincia] = useState<string>("all");
+  const [selectedCiudad, setSelectedCiudad] = useState<string>("all");
   const [selectedSucursal, setSelectedSucursal] = useState<string>("all");
   const [selectedKiosko, setSelectedKiosko] = useState<string>("all");
   const [selectedCategoria, setSelectedCategoria] = useState<string>("all");
 
   // Catálogos
+  const { regiones } = useRegiones();
   const { data: sucursalesData = [] } = useSucursales();
   const { data: kioskosData = [] } = useKioskos();
   const { data: categoriasData = [] } = useCategorias();
+  const { data: provinciasData = [] } = useProvincias();
+  const { data: cantonesData = [] } = useCantones();
+
+  // Filtrar provincias por región
+  const provinciasFiltradas = useMemo(() => {
+    if (selectedRegion === "all") return provinciasData;
+    const regionData = regiones.find(r => r.id === selectedRegion);
+    if (!regionData) return provinciasData;
+    return provinciasData.filter(p => regionData.provincias.includes(p.nombre));
+  }, [selectedRegion, provinciasData, regiones]);
+
+  // Filtrar ciudades por provincia
+  const ciudadesFiltradas = useMemo(() => {
+    if (selectedProvincia === "all") return cantonesData;
+    return cantonesData.filter(c => c.provincia === selectedProvincia);
+  }, [selectedProvincia, cantonesData]);
+
+  // Filtrar sucursales jerárquicamente
+  const sucursalesFiltradas = useMemo(() => {
+    let filtered = [...sucursalesData];
+    
+    if (selectedRegion !== "all") {
+      const regionData = regiones.find(r => r.id === selectedRegion);
+      if (regionData) {
+        filtered = filtered.filter((s: any) => regionData.provincias.includes(s.provincia));
+      }
+    }
+    
+    if (selectedProvincia !== "all") {
+      filtered = filtered.filter((s: any) => s.provincia === selectedProvincia);
+    }
+    
+    if (selectedCiudad !== "all") {
+      filtered = filtered.filter((s: any) => s.ciudad === selectedCiudad);
+    }
+    
+    return filtered;
+  }, [sucursalesData, selectedRegion, selectedProvincia, selectedCiudad, regiones]);
+
+  // Filtrar kioskos por sucursal seleccionada
+  const kioskosFiltrados = useMemo(() => {
+    if (selectedSucursal === "all") {
+      // Si no hay sucursal seleccionada, mostrar kioskos de las sucursales filtradas
+      const sucursalIds = sucursalesFiltradas.map((s: any) => s.id);
+      return kioskosData.filter((k: any) => sucursalIds.includes(k.sucursal_id));
+    }
+    return kioskosData.filter((k: any) => k.sucursal_id === selectedSucursal);
+  }, [kioskosData, selectedSucursal, sucursalesFiltradas]);
+
+  // Handlers para resetear filtros hijos cuando cambia un padre
+  const handleRegionChange = (value: string) => {
+    setSelectedRegion(value);
+    setSelectedProvincia("all");
+    setSelectedCiudad("all");
+    setSelectedSucursal("all");
+    setSelectedKiosko("all");
+  };
+
+  const handleProvinciaChange = (value: string) => {
+    setSelectedProvincia(value);
+    setSelectedCiudad("all");
+    setSelectedSucursal("all");
+    setSelectedKiosko("all");
+  };
+
+  const handleCiudadChange = (value: string) => {
+    setSelectedCiudad(value);
+    setSelectedSucursal("all");
+    setSelectedKiosko("all");
+  };
+
+  const handleSucursalChange = (value: string) => {
+    setSelectedSucursal(value);
+    setSelectedKiosko("all");
+  };
 
   // Datos de reportes
   const { data: reportData, isLoading } = useReportes(
@@ -256,21 +337,82 @@ const handleExport = () => {
             </Popover>
           </div>
 
+          {/* Región */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-admin-text-primary">
+              Región
+            </span>
+            <Select value={selectedRegion} onValueChange={handleRegionChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas las regiones" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {regiones.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Provincia */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-admin-text-primary">
+              Provincia
+            </span>
+            <Select value={selectedProvincia} onValueChange={handleProvinciaChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas las provincias" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {provinciasFiltradas.map((p: any) => (
+                  <SelectItem key={p.id} value={p.nombre}>
+                    {p.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Ciudad */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-admin-text-primary">
+              Ciudad
+            </span>
+            <Select 
+              value={selectedCiudad} 
+              onValueChange={handleCiudadChange}
+              disabled={selectedProvincia === "all"}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todas las ciudades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {ciudadesFiltradas.map((c: any) => (
+                  <SelectItem key={c.id} value={c.nombre}>
+                    {c.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Sucursal */}
           <div className="space-y-2">
             <span className="text-sm font-medium text-admin-text-primary">
               Sucursal
             </span>
-            <Select
-              value={selectedSucursal}
-              onValueChange={setSelectedSucursal}
-            >
+            <Select value={selectedSucursal} onValueChange={handleSucursalChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Todas las sucursales" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                {sucursalesData.map((s: any) => (
+                {sucursalesFiltradas.map((s: any) => (
                   <SelectItem key={s.id} value={String(s.id)}>
                     {s.nombre}
                   </SelectItem>
@@ -284,18 +426,15 @@ const handleExport = () => {
             <span className="text-sm font-medium text-admin-text-primary">
               Kiosko
             </span>
-            <Select
-              value={selectedKiosko}
-              onValueChange={setSelectedKiosko}
-            >
+            <Select value={selectedKiosko} onValueChange={setSelectedKiosko}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos los kioskos" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {kioskosData.map((k: any) => (
+                {kioskosFiltrados.map((k: any) => (
                   <SelectItem key={k.id} value={String(k.id)}>
-                    {k.nombre}
+                    {k.nombre || k.codigo}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -303,7 +442,7 @@ const handleExport = () => {
           </div>
 
           {/* Categoría */}
-          <div className="space-y-2 md:col-span-2">
+          <div className="space-y-2">
             <span className="text-sm font-medium text-admin-text-primary">
               Categoría
             </span>
@@ -326,7 +465,7 @@ const handleExport = () => {
           </div>
 
           {/* Botón exportar */}
-          <div className="flex items-end md:justify-end md:col-span-2">
+          <div className="flex items-end md:justify-end md:col-span-4">
             <Button onClick={handleExport} className="w-full md:w-auto">
               <Download className="mr-2 h-4 w-4" />
               Exportar CSV
@@ -502,11 +641,19 @@ const handleExport = () => {
                       key={index}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="text-admin-text-primary">
-                        {c.nombre}
-                      </span>
-                      <span className="font-medium">
-                        {c.turnos} turno{c.turnos !== 1 && "s"}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{
+                            backgroundColor: pieColors[index % pieColors.length],
+                          }}
+                        />
+                        <span className="text-admin-text-secondary">
+                          {c.nombre}
+                        </span>
+                      </div>
+                      <span className="font-medium text-admin-text-primary">
+                        {c.turnos}
                       </span>
                     </div>
                   ))}
@@ -515,92 +662,75 @@ const handleExport = () => {
             </Card>
           </div>
 
-          {/* Actividad por sucursal / kiosko */}
+          {/* Gráficos secundarios */}
           <div className="grid gap-4 md:grid-cols-2">
+            {/* Tiempos de espera por hora */}
             <Card>
               <CardHeader>
-                <CardTitle>Actividad por sucursal</CardTitle>
+                <CardTitle>Tiempos de espera por hora</CardTitle>
               </CardHeader>
               <CardContent>
                 <ChartContainer
                   config={{
-                    turnos: { label: "Turnos" , color:"hsl(var(--chart-1))"},
-                    eficiencia: { label: "Eficiencia %" },
+                    tiempoEspera: {
+                      label: "Tiempo de espera (min)",
+                      color: "hsl(var(--chart-3))",
+                    },
                   }}
                   className="h-72"
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={actividadSucursales}>
+                    <LineChart data={tiemposEsperaPorHora}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="sucursal" />
+                      <XAxis dataKey="hora" />
                       <YAxis />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Legend />
-                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
-                    </BarChart>
+                      <Line
+                        type="monotone"
+                        dataKey="tiempoEspera"
+                        stroke="var(--color-tiempoEspera)"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
 
+            {/* Actividad por sucursales */}
             <Card>
               <CardHeader>
-                <CardTitle>Actividad por kiosko</CardTitle>
+                <CardTitle>Actividad por sucursales</CardTitle>
               </CardHeader>
               <CardContent>
                 <ChartContainer
                   config={{
-                    turnos: { label: "Turnos", color: "hsl(var(--chart-1))"},
+                    turnos: {
+                      label: "Turnos",
+                      color: "hsl(var(--chart-4))",
+                    },
                   }}
                   className="h-72"
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={actividadKioskos}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="kiosko" />
-                      <YAxis />
+                    <BarChart
+                      data={actividadSucursales}
+                      layout="vertical"
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        horizontal={false}
+                      />
+                      <XAxis type="number" />
+                      <YAxis dataKey="nombre" type="category" width={120} />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Legend />
-                      <Bar dataKey="turnos" name="Turnos" fill="var(--color-turnos)"/>
+                      <Bar dataKey="turnos" fill="var(--color-turnos)" />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
           </div>
-
-          {/* Tiempo de espera por hora */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tiempo promedio de espera por hora</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer
-                config={{
-                  tiempo: { label: "Tiempo de espera (min)", color: "hsl(var(--chart-1))"},
-                }}
-                className="h-72"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={tiemposEsperaPorHora}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="hora" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="tiempo"
-                      name="Espera promedio (min)"
-                      stroke="var(--color-tiempo)"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
         </>
       )}
     </div>

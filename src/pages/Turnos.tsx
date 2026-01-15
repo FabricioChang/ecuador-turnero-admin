@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTurnos } from "@/hooks/useTurnos";
+import { useRegiones } from "@/hooks/useRegiones";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
-import { useRegiones } from "@/hooks/useRegiones";
 import { useSucursales } from "@/hooks/useSucursales";
 import { useCategorias } from "@/hooks/useCategorias";
 import { 
@@ -22,106 +22,8 @@ import {
   Search, 
   Filter, 
   RefreshCw,
-  Eye,
-  CalendarClock
+  Eye
 } from "lucide-react";
-
-interface Turno {
-  id: string;
-  numero: string;
-  cliente: {
-    nombre: string;
-    documento: string;
-    telefono?: string;
-  };
-  sucursal: string;
-  kiosko: string;
-  categoria: string;
-  estado: 'espera' | 'atendido' | 'perdido' | 'reagendado';
-  fechaCreacion: string;
-  horaCreacion: string;
-  fechaCita?: string;
-  horaCita?: string;
-  posicionFila: number;
-  tiempoEspera: number;
-  observaciones?: string;
-  region: string;
-  provincia: string;
-  ciudad: string;
-}
-
-const mockTurnos: Turno[] = [
-  {
-    id: "1",
-    numero: "A-001",
-    cliente: { nombre: "Juan Pérez", documento: "12345678", telefono: "555-0123" },
-    sucursal: "Sucursal Centro",
-    kiosko: "Kiosko-001",
-    categoria: "Atención General",
-    estado: "espera",
-    fechaCreacion: "2024-01-15",
-    horaCreacion: "09:30",
-    posicionFila: 1,
-    tiempoEspera: 15,
-    region: "sierra",
-    provincia: "Pichincha",
-    ciudad: "Quito"
-  },
-  {
-    id: "2",
-    numero: "B-002",
-    cliente: { nombre: "María García", documento: "87654321", telefono: "555-0456" },
-    sucursal: "Sucursal Norte",
-    kiosko: "Kiosko-002",
-    categoria: "Consultas",
-    estado: "atendido",
-    fechaCreacion: "2024-01-15",
-    horaCreacion: "09:45",
-    fechaCita: "2024-01-15",
-    horaCita: "10:00",
-    posicionFila: 0,
-    tiempoEspera: 8,
-    region: "costa",
-    provincia: "Guayas",
-    ciudad: "Guayaquil"
-  },
-  {
-    id: "3",
-    numero: "C-003",
-    cliente: { nombre: "Carlos López", documento: "11223344" },
-    sucursal: "Sucursal Sur",
-    kiosko: "Kiosko-003",
-    categoria: "Reclamos",
-    estado: "perdido",
-    fechaCreacion: "2024-01-15",
-    horaCreacion: "10:00",
-    posicionFila: 0,
-    tiempoEspera: 45,
-    observaciones: "Cliente no se presentó",
-    region: "sierra",
-    provincia: "Azuay",
-    ciudad: "Cuenca"
-  },
-  {
-    id: "4",
-    numero: "A-004",
-    cliente: { nombre: "Ana Martínez", documento: "99887766", telefono: "555-0789" },
-    sucursal: "Sucursal Centro",
-    kiosko: "Kiosko-001",
-    categoria: "Atención General",
-    estado: "reagendado",
-    fechaCreacion: "2024-01-15",
-    horaCreacion: "10:15",
-    fechaCita: "2024-01-16",
-    horaCita: "09:00",
-    posicionFila: 0,
-    tiempoEspera: 0,
-    observaciones: "Reagendado por solicitud del cliente",
-    region: "sierra",
-    provincia: "Pichincha",
-    ciudad: "Quito"
-  }
-];
 
 const Turnos = () => {
   const { data: turnosDB = [], isLoading } = useTurnos();
@@ -132,17 +34,72 @@ const Turnos = () => {
   const { data: categorias = [] } = useCategorias();
   
   const [busqueda, setBusqueda] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
-  const [provinciaFilter, setProvinciaFilter] = useState("");
-  const [ciudadFilter, setCiudadFilter] = useState("");
-  const [sucursalFilter, setSucursalFilter] = useState("");
-  const [estadoFilter, setEstadoFilter] = useState("");
-  const [categoriaFilter, setCategoriaFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState("all");
+  const [provinciaFilter, setProvinciaFilter] = useState("all");
+  const [ciudadFilter, setCiudadFilter] = useState("all");
+  const [sucursalFilter, setSucursalFilter] = useState("all");
+  const [estadoFilter, setEstadoFilter] = useState("all");
+  const [categoriaFilter, setCategoriaFilter] = useState("all");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<any | null>(null);
   const [modalDetalle, setModalDetalle] = useState(false);
   const { toast } = useToast();
+
+  // Filtrar provincias por región
+  const provinciasFiltradas = useMemo(() => {
+    if (regionFilter === "all") return provincias;
+    const regionData = regiones.find(r => r.id === regionFilter);
+    if (!regionData) return provincias;
+    return provincias.filter((p: any) => regionData.provincias.includes(p.nombre));
+  }, [regionFilter, provincias, regiones]);
+
+  // Filtrar ciudades por provincia
+  const ciudadesFiltradas = useMemo(() => {
+    if (provinciaFilter === "all") return cantones;
+    return cantones.filter((c: any) => c.provincia === provinciaFilter);
+  }, [provinciaFilter, cantones]);
+
+  // Filtrar sucursales jerárquicamente
+  const sucursalesFiltradas = useMemo(() => {
+    let filtered = [...sucursales];
+    
+    if (regionFilter !== "all") {
+      const regionData = regiones.find(r => r.id === regionFilter);
+      if (regionData) {
+        filtered = filtered.filter((s: any) => regionData.provincias.includes(s.provincia));
+      }
+    }
+    
+    if (provinciaFilter !== "all") {
+      filtered = filtered.filter((s: any) => s.provincia === provinciaFilter);
+    }
+    
+    if (ciudadFilter !== "all") {
+      filtered = filtered.filter((s: any) => s.ciudad === ciudadFilter);
+    }
+    
+    return filtered;
+  }, [sucursales, regionFilter, provinciaFilter, ciudadFilter, regiones]);
+
+  // Handlers para resetear filtros hijos
+  const handleRegionChange = (value: string) => {
+    setRegionFilter(value);
+    setProvinciaFilter("all");
+    setCiudadFilter("all");
+    setSucursalFilter("all");
+  };
+
+  const handleProvinciaChange = (value: string) => {
+    setProvinciaFilter(value);
+    setCiudadFilter("all");
+    setSucursalFilter("all");
+  };
+
+  const handleCiudadChange = (value: string) => {
+    setCiudadFilter(value);
+    setSucursalFilter("all");
+  };
 
   const turnos = turnosDB.map((t: any) => ({
     id: t.id,
@@ -152,12 +109,14 @@ const Turnos = () => {
       documento: t.cliente_identificacion || "",
     },
     sucursal: t.sucursal?.nombre || "",
+    sucursal_id: t.sucursal_id,
     kiosko: t.kiosko?.nombre || "Sin kiosko",
     categoria: t.categoria?.nombre || "",
+    categoria_id: t.categoria_id,
     estado: t.estado,
-    fechaCreacion: new Date(t.fecha_creacion).toLocaleDateString(),
-    horaCreacion: new Date(t.fecha_creacion).toLocaleTimeString(),
-    tiempoEspera: t.tiempo_espera || 0
+    fechaCreacion: new Date(t.emitido_en || t.fecha_creacion).toLocaleDateString(),
+    horaCreacion: new Date(t.emitido_en || t.fecha_creacion).toLocaleTimeString(),
+    tiempoEspera: t.tiempo_espera_seg ? Math.round(t.tiempo_espera_seg / 60) : 0
   }));
 
   // Calcular KPIs
@@ -176,26 +135,25 @@ const Turnos = () => {
     }
     
     // Filtro por sucursal
-    if (sucursalFilter && turno.sucursal !== sucursalFilter) {
+    if (sucursalFilter !== "all" && turno.sucursal_id !== sucursalFilter) {
       return false;
     }
     
+    // Filtros jerárquicos si no hay sucursal específica
+    if (sucursalFilter === "all" && sucursalesFiltradas.length > 0) {
+      const sucursalIds = sucursalesFiltradas.map((s: any) => s.id);
+      if (!sucursalIds.includes(turno.sucursal_id)) {
+        return false;
+      }
+    }
+    
     // Filtro por estado
-    if (estadoFilter && turno.estado !== estadoFilter) {
+    if (estadoFilter !== "all" && turno.estado !== estadoFilter) {
       return false;
     }
     
     // Filtro por categoría
-    if (categoriaFilter && turno.categoria !== categoriaFilter) {
-      return false;
-    }
-    
-    // Filtro por rango de fechas
-    if (fechaDesde && turno.fechaCreacion < fechaDesde) {
-      return false;
-    }
-    
-    if (fechaHasta && turno.fechaCreacion > fechaHasta) {
+    if (categoriaFilter !== "all" && turno.categoria_id !== categoriaFilter) {
       return false;
     }
     
@@ -208,7 +166,6 @@ const Turnos = () => {
       en_atencion: { variant: "default" as const, icon: RefreshCw, color: "text-blue-600", label: "En Atención" },
       atendido: { variant: "default" as const, icon: CheckCircle, color: "text-green-600", label: "Atendido" },
       cancelado: { variant: "destructive" as const, icon: XCircle, color: "text-red-600", label: "Cancelado" },
-      // Mantener compatibilidad con estados antiguos
       espera: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600", label: "En Espera" },
       perdido: { variant: "destructive" as const, icon: XCircle, color: "text-red-600", label: "Perdido" },
       reagendado: { variant: "outline" as const, icon: Calendar, color: "text-blue-600", label: "Reagendado" }
@@ -231,12 +188,16 @@ const Turnos = () => {
     );
   };
 
-  const cambiarEstadoTurno = (turnoId: string, nuevoEstado: string) => {
-    // TODO: Implementar actualización en BD
-    toast({
-      title: "Estado actualizado",
-      description: `El turno ha sido marcado como ${nuevoEstado}`,
-    });
+  const limpiarFiltros = () => {
+    setBusqueda("");
+    setRegionFilter("all");
+    setProvinciaFilter("all");
+    setCiudadFilter("all");
+    setSucursalFilter("all");
+    setEstadoFilter("all");
+    setCategoriaFilter("all");
+    setFechaDesde("");
+    setFechaHasta("");
   };
 
   return (
@@ -320,41 +281,47 @@ const Turnos = () => {
               />
             </div>
             
-            <Select value={regionFilter} onValueChange={setRegionFilter}>
+            <Select value={regionFilter} onValueChange={handleRegionChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Región" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las regiones</SelectItem>
-                <SelectItem value="costa">Costa</SelectItem>
-                <SelectItem value="sierra">Sierra</SelectItem>
-                <SelectItem value="amazonia">Amazonía</SelectItem>
-                <SelectItem value="galapagos">Galápagos</SelectItem>
+                {regiones.map(r => (
+                  <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            <Select value={provinciaFilter} onValueChange={setProvinciaFilter}>
+            <Select 
+              value={provinciaFilter} 
+              onValueChange={handleProvinciaChange}
+              disabled={regionFilter === "all"}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Provincia" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las provincias</SelectItem>
-                <SelectItem value="Pichincha">Pichincha</SelectItem>
-                <SelectItem value="Guayas">Guayas</SelectItem>
-                <SelectItem value="Azuay">Azuay</SelectItem>
-                <SelectItem value="Manabí">Manabí</SelectItem>
+                {provinciasFiltradas.map((p: any) => (
+                  <SelectItem key={p.id} value={p.nombre}>{p.nombre}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            <Select value={ciudadFilter} onValueChange={setCiudadFilter}>
+            <Select 
+              value={ciudadFilter} 
+              onValueChange={handleCiudadChange}
+              disabled={provinciaFilter === "all"}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Ciudad" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las ciudades</SelectItem>
-                <SelectItem value="Quito">Quito</SelectItem>
-                <SelectItem value="Guayaquil">Guayaquil</SelectItem>
-                <SelectItem value="Cuenca">Cuenca</SelectItem>
+                {ciudadesFiltradas.map((c: any) => (
+                  <SelectItem key={c.id} value={c.nombre}>{c.nombre}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -364,9 +331,9 @@ const Turnos = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las sucursales</SelectItem>
-                <SelectItem value="Sucursal Centro">Sucursal Centro</SelectItem>
-                <SelectItem value="Sucursal Norte">Sucursal Norte</SelectItem>
-                <SelectItem value="Sucursal Sur">Sucursal Sur</SelectItem>
+                {sucursalesFiltradas.map((s: any) => (
+                  <SelectItem key={s.id} value={s.id}>{s.nombre}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -376,10 +343,10 @@ const Turnos = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="espera">En Espera</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
+                <SelectItem value="en_atencion">En Atención</SelectItem>
                 <SelectItem value="atendido">Atendido</SelectItem>
-                <SelectItem value="perdido">Perdido</SelectItem>
-                <SelectItem value="reagendado">Reagendado</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
               </SelectContent>
             </Select>
 
@@ -389,47 +356,16 @@ const Turnos = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las categorías</SelectItem>
-                <SelectItem value="Atención General">Atención General</SelectItem>
-                <SelectItem value="Consultas">Consultas</SelectItem>
-                <SelectItem value="Reclamos">Reclamos</SelectItem>
+                {categorias.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            <div>
-              <Label className="text-sm mb-2 block">Fecha Desde</Label>
-              <Input
-                type="date"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <Label className="text-sm mb-2 block">Fecha Hasta</Label>
-              <Input
-                type="date"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
-              />
-            </div>
+            <Button variant="outline" onClick={limpiarFiltros}>
+              Limpiar Filtros
+            </Button>
           </div>
-
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              setBusqueda("");
-              setRegionFilter("");
-              setProvinciaFilter("");
-              setCiudadFilter("");
-              setSucursalFilter("");
-              setEstadoFilter("");
-              setCategoriaFilter("");
-              setFechaDesde("");
-              setFechaHasta("");
-            }}
-          >
-            Limpiar Filtros
-          </Button>
         </CardContent>
       </Card>
 
@@ -456,34 +392,42 @@ const Turnos = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {turnosFiltrados.map((turno) => (
-                  <TableRow key={turno.id}>
-                    <TableCell className="font-medium">{turno.numero}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{turno.cliente.nombre}</p>
-                        <p className="text-sm text-admin-text-muted">{turno.cliente.documento}</p>
-                      </div>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      Cargando turnos...
                     </TableCell>
-                    <TableCell>{turno.sucursal}</TableCell>
-                    <TableCell>{turno.categoria}</TableCell>
-                    <TableCell>{getEstadoBadge(turno.estado)}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>{turno.fechaCreacion}</p>
-                        <p className="text-admin-text-muted">{turno.horaCreacion}</p>
-                      </div>
+                  </TableRow>
+                ) : turnosFiltrados.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      No se encontraron turnos con los filtros seleccionados
                     </TableCell>
-                    <TableCell>
-                      <span className={`font-medium ${turno.tiempoEspera > 30 ? 'text-red-600' : 'text-admin-text-primary'}`}>
-                        {turno.tiempoEspera} min
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                  </TableRow>
+                ) : (
+                  turnosFiltrados.map((turno) => (
+                    <TableRow key={turno.id}>
+                      <TableCell className="font-medium">{turno.numero}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{turno.cliente.nombre}</p>
+                          <p className="text-sm text-admin-text-muted">{turno.cliente.documento}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{turno.sucursal}</TableCell>
+                      <TableCell>{turno.categoria}</TableCell>
+                      <TableCell>{getEstadoBadge(turno.estado)}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p>{turno.fechaCreacion}</p>
+                          <p className="text-sm text-admin-text-muted">{turno.horaCreacion}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{turno.tiempoEspera} min</TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
                           onClick={() => {
                             setTurnoSeleccionado(turno);
                             setModalDetalle(true);
@@ -491,105 +435,61 @@ const Turnos = () => {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        
-                        {turno.estado === 'espera' && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => cambiarEstadoTurno(turno.id, 'atendido')}
-                              title="Marcar como atendido"
-                            >
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => cambiarEstadoTurno(turno.id, 'perdido')}
-                              title="Marcar como perdido"
-                            >
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => cambiarEstadoTurno(turno.id, 'reagendado')}
-                              title="Reagendar"
-                            >
-                              <CalendarClock className="h-4 w-4 text-blue-600" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Modal de Detalle del Turno */}
+      {/* Modal de detalle */}
       <Dialog open={modalDetalle} onOpenChange={setModalDetalle}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Detalle del Turno</DialogTitle>
             <DialogDescription>
               Información completa del turno {turnoSeleccionado?.numero}
             </DialogDescription>
           </DialogHeader>
-          
           {turnoSeleccionado && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium">Cliente</Label>
-                  <p className="text-sm">{turnoSeleccionado.cliente.nombre}</p>
+                  <Label className="text-sm text-admin-text-muted">Número</Label>
+                  <p className="font-medium">{turnoSeleccionado.numero}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Documento</Label>
-                  <p className="text-sm">{turnoSeleccionado.cliente.documento}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Teléfono</Label>
-                  <p className="text-sm">{turnoSeleccionado.cliente.telefono || 'No registrado'}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Estado</Label>
+                  <Label className="text-sm text-admin-text-muted">Estado</Label>
                   <div className="mt-1">{getEstadoBadge(turnoSeleccionado.estado)}</div>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Sucursal</Label>
-                  <p className="text-sm">{turnoSeleccionado.sucursal}</p>
+                  <Label className="text-sm text-admin-text-muted">Cliente</Label>
+                  <p className="font-medium">{turnoSeleccionado.cliente.nombre}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Kiosko</Label>
-                  <p className="text-sm">{turnoSeleccionado.kiosko}</p>
+                  <Label className="text-sm text-admin-text-muted">Documento</Label>
+                  <p className="font-medium">{turnoSeleccionado.cliente.documento}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Categoría</Label>
-                  <p className="text-sm">{turnoSeleccionado.categoria}</p>
+                  <Label className="text-sm text-admin-text-muted">Sucursal</Label>
+                  <p className="font-medium">{turnoSeleccionado.sucursal}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Tiempo Espera</Label>
-                  <p className="text-sm">{turnoSeleccionado.tiempoEspera} minutos</p>
+                  <Label className="text-sm text-admin-text-muted">Categoría</Label>
+                  <p className="font-medium">{turnoSeleccionado.categoria}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-admin-text-muted">Fecha/Hora</Label>
+                  <p className="font-medium">{turnoSeleccionado.fechaCreacion} {turnoSeleccionado.horaCreacion}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-admin-text-muted">Tiempo de Espera</Label>
+                  <p className="font-medium">{turnoSeleccionado.tiempoEspera} min</p>
                 </div>
               </div>
-
-              {turnoSeleccionado.observaciones && (
-                <div>
-                  <Label className="text-sm font-medium">Observaciones</Label>
-                  <p className="text-sm bg-muted p-2 rounded">{turnoSeleccionado.observaciones}</p>
-                </div>
-              )}
-
-              {turnoSeleccionado.fechaCita && (
-                <div className="border-t pt-4">
-                  <Label className="text-sm font-medium">Cita Programada</Label>
-                  <p className="text-sm">{turnoSeleccionado.fechaCita} a las {turnoSeleccionado.horaCita}</p>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
