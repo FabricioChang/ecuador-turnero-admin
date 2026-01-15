@@ -48,15 +48,15 @@ export const useReportes = (
         query = query.eq("categoria_id", categoriaId);
       }
 
-      const { data: turnos, error } = await query;
+      const { data: turnos, error, count } = await query;
       if (error) throw error;
 
       if (!turnos || turnos.length === 0) {
         return null;
       }
 
-      // Calculate metrics
-      const totalTurnos = turnos.length;
+      // Calculate metrics - use count from database for accurate total
+      const totalTurnos = count ?? turnos.length;
       const turnosCompletados = turnos.filter((t: any) => t.estado === 'atendido').length;
       const tiemposEspera = turnos
         .filter((t: any) => t.tiempo_espera !== null && typeof t.tiempo_espera === 'number')
