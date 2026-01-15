@@ -8,20 +8,9 @@ import { supabaseExternal } from "@/lib/supabase-external";
 import { useCuenta } from "@/contexts/CuentaContext";
 import { useCuentas } from "@/hooks/useCuentas";
 import { useToast } from "@/hooks/use-toast";
-import { Check, ChevronsUpDown, Building2, Search } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, Building2 } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { Cuenta, UsuarioAdmin, MiembroCuenta } from "@/types/database";
 
@@ -39,82 +28,43 @@ const Login = () => {
 
   const { data: cuentas = [], isLoading: loadingCuentas } = useCuentas(searchCuenta);
 
-  useEffect(() => {
-    document.title = "Iniciar Sesión - Sistema Turnero";
-  }, []);
+  useEffect(() => { document.title = "Iniciar Sesión - Sistema Turnero"; }, []);
 
-  // Si ya está logueado, redirigir al dashboard
   useEffect(() => {
-    if (cuentaActiva && usuarioActivo) {
-      navigate("/");
-    }
+    if (cuentaActiva && usuarioActivo) navigate("/");
   }, [cuentaActiva, usuarioActivo, navigate]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedCuenta) {
-      toast({
-        title: "Selecciona una cuenta",
-        description: "Debes seleccionar la cuenta (negocio) al que deseas acceder.",
-        variant: "destructive",
-      });
+      toast({ title: "Selecciona una cuenta", description: "Debes seleccionar la cuenta al que deseas acceder.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Buscar el usuario por email
-      const { data: usuarioData, error: usuarioError } = await supabaseExternal
-        .from("usuario_admin")
-        .select("*")
-        .eq("email", email)
-        .maybeSingle();
+      const { data: usuarioData, error: usuarioError } = await (supabaseExternal as any)
+        .from("usuario_admin").select("*").eq("email", email).maybeSingle();
 
       if (usuarioError) throw usuarioError;
-      
-      if (!usuarioData) {
-        throw new Error("No existe un usuario con ese email");
-      }
+      if (!usuarioData) throw new Error("No existe un usuario con ese email");
 
-      // 2. Verificar que el usuario sea miembro de la cuenta seleccionada
-      const { data: miembroData, error: miembroError } = await supabaseExternal
-        .from("miembro_cuenta")
-        .select("*")
-        .eq("usuario_id", usuarioData.id)
-        .eq("cuenta_id", selectedCuenta.id)
-        .eq("estado", "activo")
-        .maybeSingle();
+      const { data: miembroData, error: miembroError } = await (supabaseExternal as any)
+        .from("miembro_cuenta").select("*").eq("usuario_id", usuarioData.id).eq("cuenta_id", selectedCuenta.id).eq("estado", "activo").maybeSingle();
 
       if (miembroError) throw miembroError;
+      if (!miembroData) throw new Error("No tienes acceso a esta cuenta.");
 
-      if (!miembroData) {
-        throw new Error("No tienes acceso a esta cuenta. Contacta al administrador.");
-      }
-
-      // 3. Verificar contraseña (simple comparación - en producción usar bcrypt)
-      // Nota: En una app real, deberías usar Supabase Auth o bcrypt en el backend
-      // Por ahora asumimos que la contraseña es correcta si llegamos aquí
-      // TODO: Implementar verificación de hash de contraseña
-
-      // 4. Guardar en contexto
       setCuenta(selectedCuenta);
       setUsuario(usuarioData as UsuarioAdmin);
       setMiembro(miembroData as MiembroCuenta);
 
-      toast({
-        title: "¡Bienvenido!",
-        description: `Has iniciado sesión en ${selectedCuenta.nombre}`,
-      });
-
+      toast({ title: "¡Bienvenido!", description: `Has iniciado sesión en ${selectedCuenta.nombre}` });
       navigate("/");
     } catch (error: any) {
-      toast({
-        title: "Error al iniciar sesión",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error al iniciar sesión", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -128,63 +78,29 @@ const Login = () => {
             <Building2 className="w-6 h-6 text-primary" />
           </div>
           <CardTitle className="text-xl">Sistema Turnero</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Ingresa tus credenciales para acceder al panel
-          </p>
+          <p className="text-sm text-muted-foreground">Ingresa tus credenciales para acceder al panel</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
-            {/* Selector de Cuenta */}
             <div className="space-y-2">
               <Label>Cuenta (Negocio)</Label>
               <Popover open={openCuentas} onOpenChange={setOpenCuentas}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openCuentas}
-                    className="w-full justify-between"
-                  >
-                    {selectedCuenta ? (
-                      <span className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        {selectedCuenta.nombre}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Selecciona una cuenta...</span>
-                    )}
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                    {selectedCuenta ? <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{selectedCuenta.nombre}</span> : <span className="text-muted-foreground">Selecciona una cuenta...</span>}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0 bg-popover" align="start">
                   <Command>
-                    <CommandInput 
-                      placeholder="Buscar cuenta..." 
-                      value={searchCuenta}
-                      onValueChange={setSearchCuenta}
-                    />
+                    <CommandInput placeholder="Buscar cuenta..." value={searchCuenta} onValueChange={setSearchCuenta} />
                     <CommandList>
-                      <CommandEmpty>
-                        {loadingCuentas ? "Buscando..." : "No se encontraron cuentas."}
-                      </CommandEmpty>
+                      <CommandEmpty>{loadingCuentas ? "Buscando..." : "No se encontraron cuentas."}</CommandEmpty>
                       <CommandGroup>
-                        {cuentas.map((cuenta) => (
-                          <CommandItem
-                            key={cuenta.id}
-                            value={cuenta.nombre}
-                            onSelect={() => {
-                              setSelectedCuenta(cuenta);
-                              setOpenCuentas(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedCuenta?.id === cuenta.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
-                            {cuenta.nombre}
+                        {cuentas.map((cuenta: any) => (
+                          <CommandItem key={cuenta.id} value={cuenta.nombre} onSelect={() => { setSelectedCuenta(cuenta); setOpenCuentas(false); }}>
+                            <Check className={cn("mr-2 h-4 w-4", selectedCuenta?.id === cuenta.id ? "opacity-100" : "opacity-0")} />
+                            <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />{cuenta.nombre}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -193,33 +109,14 @@ const Login = () => {
                 </PopoverContent>
               </Popover>
             </div>
-
-            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
-                placeholder="tu@email.com" 
-                required 
-              />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" required />
             </div>
-
-            {/* Contraseña */}
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                placeholder="Tu contraseña" 
-                required 
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Tu contraseña" required />
             </div>
-
             <Button type="submit" className="w-full" disabled={loading || !selectedCuenta}>
               {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </Button>
