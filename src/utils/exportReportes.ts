@@ -25,23 +25,25 @@ export const exportToCSV = (data: any[], filename: string) => {
     ),
   ].join("\n");
 
-  const blob = new Blob([csvContent], {
+  const blob = new Blob(["\uFEFF" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
 
+  // Use a more reliable download approach
   const url = URL.createObjectURL(blob);
+  
+  // Create and configure link
   const link = document.createElement("a");
   link.href = url;
-  link.setAttribute("download", `${filename}.csv`);
-  link.style.display = "none";
-  document.body.appendChild(link);
+  link.download = `${filename}.csv`;
   
-  // Use setTimeout to prevent dialog crash
+  // Trigger download without adding to DOM (prevents dialog issues)
+  link.click();
+  
+  // Clean up after a delay
   setTimeout(() => {
-    link.click();
-    document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, 100);
+  }, 1000);
 };
 
 /**
