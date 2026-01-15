@@ -1,66 +1,96 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseExternal } from "@/lib/supabase-external";
+import { useCuenta } from "@/contexts/CuentaContext";
+import type { UsuarioAdmin, MiembroCuenta, UsuarioRol, Rol } from "@/types/database";
 
-export interface Usuario {
-  id: number;
-  auth_id: string | null;
-  identificador: string;
-  nombres: string;
-  apellidos: string;
-  email: string;
-  telefono: string | null;
-  cedula: string | null;
-  provincia_id: number | null;
-  canton_id: number | null;
-  direccion: string | null;
-  created_at: string;
-  updated_at: string;
-  provincia?: { nombre: string };
-  canton?: { nombre: string };
-  user_roles?: { role: string }[];
+export interface MiembroConUsuario extends MiembroCuenta {
+  usuario?: UsuarioAdmin;
+  roles?: {
+    rol?: Rol;
+  }[];
 }
 
-export const useUsuarios = () => {
+export const useUsuariosMiembros = () => {
+  const { cuenta } = useCuenta();
+
   return useQuery({
-    queryKey: ["usuarios"],
+    queryKey: ["usuarios_miembros", cuenta?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("usuarios")
-        .select(
-          `
-          id,
-          auth_id,
-          nombres,
-          apellidos,
-          email,
-          telefono,
-          cedula,
-          provincia_id,
-          canton_id,
-          direccion,
-          created_at,
-          updated_at,
-          provincia:provincias(nombre),
-          canton:cantones(nombre),
-          roles_usuarios:roles_usuarios(rol)
-        `
-        )
-        .order("created_at", { ascending: false });
+      if (!cuenta?.id) return [];
+      
+      const { data, error } = await supabaseExternal
+        .from("miembro_cuenta")
+        .select(`
+          *,
+          usuario:usuario_admin(*),
+          roles:usuario_rol(
+            rol:rol(*)
+          )
+        `)
+        .eq("cuenta_id", cuenta.id)
+        .order("creado_en", { ascending: false });
 
       if (error) throw error;
-
-      const mapped =
-        (data || []).map((u: any) => ({
-          ...u,
-          identificador: u.email || String(u.id),
-          user_roles: (u.roles_usuarios || []).map((r: any) => ({
-            role: r.rol,
-          })),
-        })) as Usuario[];
-
-      return mapped;
+      return data as MiembroConUsuario[];
     },
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    enabled: !!cuenta?.id,
+  });
+};
+
+export const useUsuarioAdmin = (id: string) => {
+  return useQuery({
+    queryKey: ["usuario_admin", id],
+    queryFn: async () => {
+      if (!id) return null;
+
+      const { data, error } = await supabaseExternal
+        .from("usuario_admin")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return data as UsuarioAdmin;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useUsuarioAdminByEmail = (email: string) => {
+  return useQuery({
+    queryKey: ["usuario_admin_email", email],
+    queryFn: async () => {
+      if (!email) return null;
+
+      const { data, error } = await supabaseExternal
+        .from("usuario_admin")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as UsuarioAdmin | null;
+    },
+    enabled: !!email,
+  });
+};
+
+export const useMiembroCuenta = (usuarioId: string, cuentaId: string) => {
+  return useQuery({
+    queryKey: ["miembro_cuenta", usuarioId, cuentaId],
+    queryFn: async () => {
+      if (!usuarioId || !cuentaId) return null;
+
+      const { data, error } = await supabaseExternal
+        .from("miembro_cuenta")
+        .select("*")
+        .eq("usuario_id", usuarioId)
+        .eq("cuenta_id", cuentaId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as MiembroCuenta | null;
+    },
+    enabled: !!usuarioId && !!cuentaId,
   });
 };

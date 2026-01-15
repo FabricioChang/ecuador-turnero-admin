@@ -1,49 +1,50 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseExternal } from "@/lib/supabase-external";
+import { useCuenta } from "@/contexts/CuentaContext";
+import type { Categoria } from "@/types/database";
 
-export interface CategoriaRow {
-  id: number;
-  nombre: string;
-  descripcion: string | null;
-  color: string;
-  tiempo_estimado: number;
-  sucursal_id: number | null;
-  estado: string;
-  created_at: string;
-  updated_at: string;
-  sucursal?: { nombre: string };
-}
+export type CategoriaRow = Categoria;
 
 export const useCategorias = (sucursalId?: string) => {
+  const { cuenta } = useCuenta();
+
   return useQuery({
-    queryKey: ["categorias", sucursalId],
+    queryKey: ["categorias", cuenta?.id, sucursalId],
     queryFn: async () => {
-      let query = supabase
-        .from("categorias")
-        .select(
-          `
-          id,
-          nombre,
-          descripcion,
-          color,
-          tiempo_estimado,
-          sucursal_id,
-          estado,
-          created_at,
-          updated_at,
-          sucursal:sucursales(nombre)
-        `
-        )
+      if (!cuenta?.id) return [];
+      
+      let query = supabaseExternal
+        .from("categoria")
+        .select("*")
+        .eq("cuenta_id", cuenta.id)
         .order("nombre", { ascending: true });
 
-      if (sucursalId && sucursalId !== "all") {
-        query = query.eq("sucursal_id", Number(sucursalId));
-      }
-
       const { data, error } = await query;
+      if (error) throw error;
+      return data as CategoriaRow[];
+    },
+    enabled: !!cuenta?.id,
+  });
+};
+
+export const useCategoria = (id: string) => {
+  const { cuenta } = useCuenta();
+
+  return useQuery({
+    queryKey: ["categoria", id],
+    queryFn: async () => {
+      if (!id || !cuenta?.id) return null;
+
+      const { data, error } = await supabaseExternal
+        .from("categoria")
+        .select("*")
+        .eq("id", id)
+        .eq("cuenta_id", cuenta.id)
+        .single();
 
       if (error) throw error;
-      return (data || []) as CategoriaRow[];
+      return data as CategoriaRow;
     },
+    enabled: !!id && !!cuenta?.id,
   });
 };
