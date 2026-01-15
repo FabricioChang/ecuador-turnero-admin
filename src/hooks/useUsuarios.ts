@@ -22,7 +22,7 @@ export const useUsuariosMiembros = () => {
         .from("miembro_cuenta")
         .select(`
           *,
-          usuario:usuario_admin(*),
+          usuario:usuario_admin!miembro_cuenta_usuario_id_fkey(*),
           roles:usuario_rol(
             rol:rol(*)
           )
