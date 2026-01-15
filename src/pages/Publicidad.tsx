@@ -320,12 +320,12 @@ const Publicidad = () => {
                     <TableCell className="text-admin-text-secondary">{item.duracion}s</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">
-                        {item.estado === 'activo' ? (
+                        {item.estado === 'activa' ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600" />
                         )}
-                        <span className={`text-sm capitalize ${item.estado === 'activo' ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={`text-sm capitalize ${item.estado === 'activa' ? 'text-green-600' : 'text-red-600'}`}>
                           {item.estado}
                         </span>
                       </div>
