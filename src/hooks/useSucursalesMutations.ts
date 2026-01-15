@@ -18,9 +18,6 @@ export const useCreateSucursal = () => {
     }) => {
       if (!cuenta?.id) throw new Error("No hay cuenta seleccionada");
 
-      // Generate a simple identifier
-      const identificador = `SUC-${Date.now().toString(36).toUpperCase()}`;
-
       const { data: result, error } = await (supabaseExternal as any)
         .from("sucursal")
         .insert({
@@ -29,7 +26,6 @@ export const useCreateSucursal = () => {
           provincia: data.provincia || "",
           ciudad: data.ciudad || "",
           direccion: data.direccion || "",
-          codigo: identificador,
           estado: "activo",
           cuenta_id: cuenta.id,
         })
