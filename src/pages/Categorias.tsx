@@ -7,88 +7,76 @@ import { Label } from "@/components/ui/label";
 import { Plus, Tag, Clock, Users, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCategorias } from "@/hooks/useCategorias";
-import { useSucursales } from "@/hooks/useSucursales";
 
 const Categorias = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [sucursalFilter, setSucursalFilter] = useState("");
-  const [estadoFilter, setEstadoFilter] = useState("");
+  const [prioridadFilter, setPrioridadFilter] = useState("");
 
   const { data: categoriasDB = [], isLoading } = useCategorias();
-  const { data: sucursales = [] } = useSucursales();
 
   const categorias = categoriasDB.map((cat: any) => ({
     id: cat.id,
     nombre: cat.nombre,
     descripcion: cat.descripcion || "Sin descripción",
-    tiempoEsperaEstimado: cat.tiempo_estimado ?? 0,
-    estado: cat.estado,
-    color: cat.color,
-    sucursal: cat.sucursal?.nombre || "General",
-    sucursal_id: cat.sucursal_id
+    tiempoPromedioSeg: cat.tiempo_prom_seg ?? 0,
+    prioridad: cat.prioridad_default || "regular",
+    activo: cat.activo ?? true
   }));
 
   const filteredCategorias = useMemo(() => {
     return categorias.filter(categoria => {
       const matchesSearch = categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesSucursal = !sucursalFilter || categoria.sucursal_id === sucursalFilter;
-      const matchesEstado = !estadoFilter || categoria.estado === estadoFilter;
-      return matchesSearch && matchesSucursal && matchesEstado;
+      const matchesPrioridad = !prioridadFilter || categoria.prioridad === prioridadFilter;
+      return matchesSearch && matchesPrioridad;
     });
-  }, [categorias, searchTerm, sucursalFilter, estadoFilter]);
+  }, [categorias, searchTerm, prioridadFilter]);
 
   const clearFilters = () => {
     setSearchTerm("");
-    setSucursalFilter("");
-    setEstadoFilter("");
+    setPrioridadFilter("");
   };
 
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case "activo":
-        return "bg-green-100 text-green-800";
-      case "mantenimiento":
-        return "bg-yellow-100 text-yellow-800";
-      case "inactivo":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getEstadoLabel = (estado: string) => {
-    switch (estado) {
-      case "activo":
-        return "Activo";
-      case "mantenimiento":
-        return "Mantenimiento";
-      case "inactivo":
-        return "Inactivo";
-      default:
-        return estado;
-    }
-  };
-
-  const handleVerDetalles = (id: number) => {
+  const handleVerDetalles = (id: string) => {
     navigate(`/categorias/${id}/detalles`);
   };
 
-  const handleConfigurar = (id: number) => {
+  const handleConfigurar = (id: string) => {
     navigate(`/categorias/${id}/configurar`);
   };
 
   const getPrioridadColor = (prioridad: string) => {
     switch (prioridad) {
-      case "Alta":
+      case "preferencial":
         return "bg-red-100 text-red-800";
-      case "Media":
-        return "bg-yellow-100 text-yellow-800";
-      case "Baja":
-        return "bg-green-100 text-green-800";
+      case "regular":
+        return "bg-blue-100 text-blue-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const getPrioridadLabel = (prioridad: string) => {
+    switch (prioridad) {
+      case "preferencial":
+        return "Preferencial";
+      case "regular":
+        return "Regular";
+      default:
+        return prioridad;
+    }
+  };
+
+  const formatTiempo = (segundos: number) => {
+    if (segundos < 60) {
+      return `${segundos} seg`;
+    }
+    const minutos = Math.floor(segundos / 60);
+    const segsRestantes = segundos % 60;
+    if (segsRestantes === 0) {
+      return `${minutos} min`;
+    }
+    return `${minutos} min ${segsRestantes} seg`;
   };
 
   return (
@@ -128,33 +116,16 @@ const Categorias = () => {
           </div>
 
           {/* Filter Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-admin-text-primary">Sucursal</Label>
-              <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+              <Label className="text-sm font-medium text-admin-text-primary">Prioridad</Label>
+              <Select value={prioridadFilter} onValueChange={setPrioridadFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas las sucursales" />
+                  <SelectValue placeholder="Todas las prioridades" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sucursales.map((sucursal) => (
-                    <SelectItem key={sucursal.id} value={sucursal.id}>
-                      {sucursal.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-admin-text-primary">Estado</Label>
-              <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los estados" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="activo">Activo</SelectItem>
-                  <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
-                  <SelectItem value="inactivo">Inactivo</SelectItem>
+                  <SelectItem value="preferencial">Preferencial</SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -181,35 +152,37 @@ const Categorias = () => {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between gap-2">
                 <span className="text-admin-text-primary truncate leading-relaxed pb-1">{categoria.nombre}</span>
-                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${getEstadoColor(categoria.estado)}`}>
-                  {getEstadoLabel(categoria.estado)}
+                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
+                  categoria.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {categoria.activo ? 'Activo' : 'Inactivo'}
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Tag className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                  <span className="text-sm text-admin-text-secondary">Prioridad:</span>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap flex-shrink-0 ${getPrioridadColor(categoria.prioridad)}`}>
+                  {getPrioridadLabel(categoria.prioridad)}
+                </span>
+              </div>
+
               <div className="flex items-center space-x-2 min-w-0">
                 <Clock className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-admin-text-primary">{categoria.tiempoEsperaEstimado} minutos</p>
-                  <p className="text-xs text-admin-text-muted">Tiempo estimado</p>
+                  <p className="text-sm font-medium text-admin-text-primary">{formatTiempo(categoria.tiempoPromedioSeg)}</p>
+                  <p className="text-xs text-admin-text-muted">Tiempo promedio</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center space-x-2 min-w-0">
-                  <Tag className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-admin-text-primary truncate">{categoria.sucursal}</p>
-                    <p className="text-xs text-admin-text-muted">Sucursal</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2 min-w-0">
-                  <Users className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-admin-text-primary truncate leading-relaxed pb-1" title={categoria.descripcion}>{categoria.descripcion}</p>
-                    <p className="text-xs text-admin-text-muted">Descripción</p>
-                  </div>
+              <div className="flex items-center space-x-2 min-w-0">
+                <Users className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-admin-text-primary truncate leading-relaxed pb-1" title={categoria.descripcion}>{categoria.descripcion}</p>
+                  <p className="text-xs text-admin-text-muted">Descripción</p>
                 </div>
               </div>
 
