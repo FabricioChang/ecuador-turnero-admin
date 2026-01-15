@@ -485,7 +485,7 @@ const NuevaSucursal = () => {
           <Button
             type="submit"
             disabled={createSucursal.isPending}
-            className="bg-admin-primary hover:bg-admin-primary/90"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {createSucursal.isPending ? (
               <>
