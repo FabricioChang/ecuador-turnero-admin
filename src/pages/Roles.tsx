@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Save, CheckCircle2, Users, Building2, Monitor, Ticket, BarChart3, Settings } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Shield, Save, CheckCircle2, Users, Building2, Monitor, Ticket, BarChart3, Settings, Plus, Loader2 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useCustomRoles, useCustomRolePermissions, useUpdateCustomRolePermissions } from "@/hooks/useCustomRoles";
+import { useCustomRoles, useCustomRolePermissions, useUpdateCustomRolePermissions, useCreateCustomRole } from "@/hooks/useCustomRoles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 const categoryIcons: Record<string, React.ReactNode> = {
   usuarios: <Users className="h-4 w-4" />,
   sucursales: <Building2 className="h-4 w-4" />,
@@ -35,11 +37,17 @@ const Roles = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [localPermissions, setLocalPermissions] = useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // New role dialog state
+  const [isNewRoleDialogOpen, setIsNewRoleDialogOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDescription, setNewRoleDescription] = useState("");
 
   const { data: permissions = [], isLoading: loadingPermissions } = usePermissions();
   const { data: customRoles = [], isLoading: loadingCustomRoles } = useCustomRoles();
   const { data: rolePermissions = [], isLoading: loadingRolePermissions } = useCustomRolePermissions(selectedRoleId);
   const updatePermissions = useUpdateCustomRolePermissions();
+  const createRole = useCreateCustomRole();
 
   const permissionsByCategory = useMemo(() => {
     const grouped: Record<string, typeof permissions> = {};
@@ -110,6 +118,19 @@ const Roles = () => {
     setSelectedRoleId(roleId);
   };
 
+  const handleCreateRole = async () => {
+    if (!newRoleName.trim()) return;
+    
+    await createRole.mutateAsync({
+      nombre: newRoleName.trim(),
+      descripcion: newRoleDescription.trim() || undefined,
+    });
+    
+    setNewRoleName("");
+    setNewRoleDescription("");
+    setIsNewRoleDialogOpen(false);
+  };
+
   // Count permissions per category for the selected role
   const getPermissionCount = (category: string) => {
     const catPerms = permissionsByCategory[category] || [];
@@ -157,6 +178,17 @@ const Roles = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {/* New Role Card */}
+            <Card
+              className="cursor-pointer transition-all border-dashed border-2 border-admin-border-light hover:border-primary hover:bg-primary/5"
+              onClick={() => setIsNewRoleDialogOpen(true)}
+            >
+              <CardContent className="p-4 h-full flex flex-col items-center justify-center min-h-[120px]">
+                <Plus className="h-10 w-10 text-muted-foreground mb-2" />
+                <span className="text-sm font-medium text-muted-foreground">Nuevo Rol</span>
+              </CardContent>
+            </Card>
+            
             {customRoles.map((role) => (
               <Card
                 key={role.id}
@@ -309,6 +341,54 @@ const Roles = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Role Dialog */}
+      <Dialog open={isNewRoleDialogOpen} onOpenChange={setIsNewRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Rol</DialogTitle>
+            <DialogDescription>
+              Ingresa los datos del nuevo rol. Podrás asignar permisos después de crearlo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="roleName">Nombre del Rol *</Label>
+              <Input
+                id="roleName"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                placeholder="Ej: Coordinador"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="roleDescription">Descripción</Label>
+              <Textarea
+                id="roleDescription"
+                value={newRoleDescription}
+                onChange={(e) => setNewRoleDescription(e.target.value)}
+                placeholder="Descripción del rol y sus responsabilidades"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewRoleDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateRole} disabled={!newRoleName.trim() || createRole.isPending}>
+              {createRole.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creando...
+                </>
+              ) : (
+                "Crear Rol"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

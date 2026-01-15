@@ -1,18 +1,18 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense, lazy } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Search, Plus, Monitor, Wifi, Settings } from "lucide-react";
+import { ArrowLeft, Search, Monitor, Wifi, Settings, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { useProvincias } from "@/hooks/useProvincias";
-import { useCantones } from "@/hooks/useCantones";
-import { useRegiones } from "@/hooks/useRegiones";
 import { useCreateSucursal } from "@/hooks/useSucursalesMutations";
-import { AddressInput } from "@/components/AddressInput";
+import { PROVINCIAS_ECUADOR, findProvinciaByName, findCiudadInProvincia } from "@/data/ecuadorProvincias";
+
+// Lazy load the map component
+const LocationMap = lazy(() => import("@/components/LocationMap"));
 
 interface Kiosko {
   id: number;
@@ -34,14 +34,14 @@ const NuevaSucursal = () => {
   const [formData, setFormData] = useState({
     nombre: "",
     provincia_id: "",
-    canton_id: "",
+    ciudad: "",
     direccion: "",
     email: "",
     telefono_sms: "",
     capacidad_maxima: "",
   });
   
-  const [selectedRegion, setSelectedRegion] = useState("");
+  const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
 
   const [searchKioskos, setSearchKioskos] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
@@ -51,23 +51,18 @@ const NuevaSucursal = () => {
   const [estadoFilter, setEstadoFilter] = useState("");
   const [selectedKioskos, setSelectedKioskos] = useState<number[]>([]);
 
-  // Cargar datos desde la base de datos
-  const { regiones } = useRegiones();
-  const provincias = useProvincias();
-  const cantones = useCantones(formData.provincia_id);
-
-  // Filtrar provincias por región seleccionada
-  const provinciasFiltradas = useMemo(() => {
-    if (!regionFilter) return provincias.data || [];
-    const regionSeleccionada = regiones.find(r => r.id === regionFilter);
-    return (provincias.data || []).filter(p => regionSeleccionada?.provincias.includes(p.nombre));
-  }, [regionFilter, provincias.data, regiones]);
-
-  // Filtrar cantones por provincia seleccionada en el formulario
-  const cantonesFiltrados = useMemo(() => {
+  // Get cities for selected province
+  const ciudadesDisponibles = useMemo(() => {
     if (!formData.provincia_id) return [];
-    return (cantones.data || []).filter((c: any) => c.provincia === formData.provincia_id);
-  }, [formData.provincia_id, cantones.data]);
+    const provincia = PROVINCIAS_ECUADOR.find(p => p.id === formData.provincia_id);
+    return provincia?.ciudades || [];
+  }, [formData.provincia_id]);
+
+  // Filter provinces by region for kiosko filters
+  const provinciasFiltradas = useMemo(() => {
+    if (!regionFilter || regionFilter === "all") return PROVINCIAS_ECUADOR;
+    return PROVINCIAS_ECUADOR.filter(p => p.region.toLowerCase() === regionFilter.toLowerCase());
+  }, [regionFilter]);
 
   const kioskosDisponibles: Kiosko[] = [
     {
@@ -150,7 +145,7 @@ const NuevaSucursal = () => {
     setCiudadFilter("");
   };
 
-  const handleProvinciaChange = (value: string) => {
+  const handleProvinciaFilterChange = (value: string) => {
     setProvinciaFilter(value);
     setCiudadFilter("");
   };
@@ -169,6 +164,43 @@ const NuevaSucursal = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleProvinciaChange = (provinciaId: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      provincia_id: provinciaId,
+      ciudad: "" // Reset city when province changes
+    }));
+  };
+
+  const handleLocationSelect = (location: { lat: number; lng: number; direccion: string; provincia: string; ciudad: string }) => {
+    setMapPosition({ lat: location.lat, lng: location.lng });
+    
+    // Auto-fill address
+    if (location.direccion) {
+      setFormData(prev => ({ ...prev, direccion: location.direccion }));
+    }
+    
+    // Try to match provincia
+    if (location.provincia) {
+      const matchedProvincia = findProvinciaByName(location.provincia);
+      if (matchedProvincia) {
+        setFormData(prev => ({ 
+          ...prev, 
+          provincia_id: matchedProvincia.id,
+          direccion: location.direccion || prev.direccion
+        }));
+        
+        // Try to match ciudad within the provincia
+        if (location.ciudad) {
+          const matchedCiudad = findCiudadInProvincia(location.ciudad, matchedProvincia.id);
+          if (matchedCiudad) {
+            setFormData(prev => ({ ...prev, ciudad: matchedCiudad }));
+          }
+        }
+      }
+    }
   };
 
   const handleKioskoToggle = (kioskoId: number) => {
@@ -200,26 +232,29 @@ const NuevaSucursal = () => {
       return;
     }
 
-    if (!formData.canton_id) {
+    if (!formData.ciudad) {
       toast({
         title: "Error",
-        description: "El cantón es requerido",
+        description: "La ciudad es requerida",
         variant: "destructive"
       });
       return;
     }
 
+    // Get provincia name from ID
+    const provincia = PROVINCIAS_ECUADOR.find(p => p.id === formData.provincia_id);
+
     try {
       await createSucursal.mutateAsync({
         nombre: formData.nombre,
-        provincia_id: formData.provincia_id,
-        canton_id: formData.canton_id,
+        provincia: provincia?.nombre || "",
+        ciudad: formData.ciudad,
         direccion: formData.direccion || undefined,
+        region: provincia?.region || "Sierra",
       });
 
       navigate('/sucursales');
     } catch (error) {
-      // El error ya se maneja en el hook
       console.error('Error al crear sucursal:', error);
     }
   };
@@ -270,26 +305,15 @@ const NuevaSucursal = () => {
             <CardTitle className="text-admin-text-primary">Información Básica</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre de la Sucursal *</Label>
-                <Input
-                  id="nombre"
-                  value={formData.nombre}
-                  onChange={(e) => handleInputChange('nombre', e.target.value)}
-                  placeholder="Ej: Sucursal Centro Norte"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="direccion">Dirección</Label>
-                <AddressInput
-                  id="direccion"
-                  value={formData.direccion}
-                  onChange={(value) => handleInputChange('direccion', value)}
-                  placeholder="Ej: Av. 10 de Agosto 123"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="nombre">Nombre de la Sucursal *</Label>
+              <Input
+                id="nombre"
+                value={formData.nombre}
+                onChange={(e) => handleInputChange('nombre', e.target.value)}
+                placeholder="Ej: Sucursal Centro Norte"
+                required
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -297,16 +321,13 @@ const NuevaSucursal = () => {
                 <Label htmlFor="provincia">Provincia *</Label>
                 <Select
                   value={formData.provincia_id}
-                  onValueChange={(value) => {
-                    handleInputChange('provincia_id', value);
-                    handleInputChange('canton_id', ''); // Reset canton when province changes
-                  }}
+                  onValueChange={handleProvinciaChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar provincia" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {provinciasFiltradas.map((provincia) => (
+                  <SelectContent className="max-h-[300px]">
+                    {PROVINCIAS_ECUADOR.map((provincia) => (
                       <SelectItem key={provincia.id} value={provincia.id}>
                         {provincia.nombre}
                       </SelectItem>
@@ -315,19 +336,19 @@ const NuevaSucursal = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="canton">Cantón *</Label>
+                <Label htmlFor="ciudad">Ciudad *</Label>
                 <Select
-                  value={formData.canton_id}
-                  onValueChange={(value) => handleInputChange('canton_id', value)}
+                  value={formData.ciudad}
+                  onValueChange={(value) => handleInputChange('ciudad', value)}
                   disabled={!formData.provincia_id}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar cantón" />
+                    <SelectValue placeholder="Seleccionar ciudad" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {cantonesFiltrados.map((canton) => (
-                      <SelectItem key={canton.id} value={canton.id}>
-                        {canton.nombre}
+                  <SelectContent className="max-h-[300px]">
+                    {ciudadesDisponibles.map((ciudad) => (
+                      <SelectItem key={ciudad} value={ciudad}>
+                        {ciudad}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -335,6 +356,30 @@ const NuevaSucursal = () => {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="direccion">Dirección</Label>
+              <Input
+                id="direccion"
+                value={formData.direccion}
+                onChange={(e) => handleInputChange('direccion', e.target.value)}
+                placeholder="Ej: Av. 10 de Agosto N123 y Av. Colón"
+              />
+            </div>
+
+            {/* Map Component */}
+            <div className="space-y-2">
+              <Label>Ubicación en el Mapa</Label>
+              <Suspense fallback={
+                <div className="h-[300px] rounded-lg border border-admin-border-light flex items-center justify-center bg-muted">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              }>
+                <LocationMap 
+                  onLocationSelect={handleLocationSelect}
+                  initialPosition={mapPosition}
+                />
+              </Suspense>
+            </div>
           </CardContent>
         </Card>
 
@@ -382,13 +427,12 @@ const NuevaSucursal = () => {
                   <Label>Provincia</Label>
                   <Select 
                     value={provinciaFilter} 
-                    onValueChange={handleProvinciaChange}
-                    disabled={provincias.isLoading}
+                    onValueChange={handleProvinciaFilterChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Provincia" />
                     </SelectTrigger>
-                    <SelectContent className="z-50">
+                    <SelectContent className="z-50 max-h-[300px]">
                       <SelectItem value="all">Todas</SelectItem>
                       {provinciasFiltradas.map(prov => (
                         <SelectItem key={prov.id} value={prov.nombre}>{prov.nombre}</SelectItem>
@@ -402,16 +446,18 @@ const NuevaSucursal = () => {
                   <Select 
                     value={ciudadFilter} 
                     onValueChange={setCiudadFilter}
-                    disabled={!provinciaFilter || provinciaFilter === "all" || cantones.isLoading}
+                    disabled={!provinciaFilter || provinciaFilter === "all"}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Ciudad" />
                     </SelectTrigger>
-                    <SelectContent className="z-50">
+                    <SelectContent className="z-50 max-h-[300px]">
                       <SelectItem value="all">Todas</SelectItem>
-                      {cantonesFiltrados.map(ciudad => (
-                        <SelectItem key={ciudad.id} value={ciudad.nombre}>{ciudad.nombre}</SelectItem>
-                      ))}
+                      {provinciaFilter && provinciaFilter !== "all" && 
+                        PROVINCIAS_ECUADOR.find(p => p.nombre === provinciaFilter)?.ciudades.map(ciudad => (
+                          <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
+                        ))
+                      }
                     </SelectContent>
                   </Select>
                 </div>
@@ -477,17 +523,16 @@ const NuevaSucursal = () => {
                               {getEstadoIcon(kiosko.estado)}
                               <span className={`text-xs px-2 py-1 rounded-full ${
                                 kiosko.estado === 'Disponible' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-yellow-100 text-yellow-700'
                               }`}>
                                 {kiosko.estado}
                               </span>
                             </div>
                           </div>
-                          <div className="mt-1 flex items-center space-x-4 text-xs text-admin-text-muted">
-                            <span>Categoría: {kiosko.categoria}</span>
-                            <span>Tipo: {kiosko.tipo}</span>
-                          </div>
+                          <p className="text-xs text-admin-text-muted mt-1">
+                            {kiosko.categoria} • {kiosko.tipo} • {kiosko.ciudad}, {kiosko.provincia}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -507,9 +552,15 @@ const NuevaSucursal = () => {
           >
             Cancelar
           </Button>
-          <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Crear Sucursal
+          <Button type="submit" disabled={createSucursal.isPending}>
+            {createSucursal.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creando...
+              </>
+            ) : (
+              "Crear Sucursal"
+            )}
           </Button>
         </div>
       </form>
