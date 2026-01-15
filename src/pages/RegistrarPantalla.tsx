@@ -50,9 +50,8 @@ const RegistrarPantalla = () => {
 
   const cantonesFiltrados = useMemo(() => {
     if (!provinciaFilter || provinciaFilter === "all") return cantones;
-    const provinciaSeleccionada = provincias.find(p => p.nombre === provinciaFilter);
-    return cantones.filter(c => c.provincia_id === provinciaSeleccionada?.id);
-  }, [provinciaFilter, cantones, provincias]);
+    return cantones.filter((c: any) => c.provincia === provinciaFilter);
+  }, [provinciaFilter, cantones]);
 
   const filteredSucursales = useMemo(() => {
     return sucursales.filter((sucursal: any) => {
