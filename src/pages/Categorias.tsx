@@ -1,40 +1,73 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Plus, Tag, Clock, Users, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCategorias } from "@/hooks/useCategorias";
+import { useSucursales } from "@/hooks/useSucursales";
 
 const Categorias = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [prioridadFilter, setPrioridadFilter] = useState("");
+  const [sucursalFilter, setSucursalFilter] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("");
 
   const { data: categoriasDB = [], isLoading } = useCategorias();
+  const { data: sucursales = [] } = useSucursales();
 
   const categorias = categoriasDB.map((cat: any) => ({
     id: cat.id,
     nombre: cat.nombre,
     descripcion: cat.descripcion || "Sin descripción",
-    tiempoEsperaEstimado: cat.tiempo_estimado,
+    tiempoEsperaEstimado: cat.tiempo_estimado ?? 0,
     estado: cat.estado,
     color: cat.color,
-    sucursal: cat.sucursal?.nombre || "General"
+    sucursal: cat.sucursal?.nombre || "General",
+    sucursal_id: cat.sucursal_id
   }));
 
-  const filteredCategorias = categorias.filter(categoria => {
-    const matchesSearch = categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesEstado = !estadoFilter || categoria.estado.toLowerCase() === estadoFilter.toLowerCase();
-    return matchesSearch && matchesEstado;
-  });
+  const filteredCategorias = useMemo(() => {
+    return categorias.filter(categoria => {
+      const matchesSearch = categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSucursal = !sucursalFilter || categoria.sucursal_id === sucursalFilter;
+      const matchesEstado = !estadoFilter || categoria.estado === estadoFilter;
+      return matchesSearch && matchesSucursal && matchesEstado;
+    });
+  }, [categorias, searchTerm, sucursalFilter, estadoFilter]);
 
   const clearFilters = () => {
     setSearchTerm("");
-    setPrioridadFilter("");
+    setSucursalFilter("");
     setEstadoFilter("");
+  };
+
+  const getEstadoColor = (estado: string) => {
+    switch (estado) {
+      case "activo":
+        return "bg-green-100 text-green-800";
+      case "mantenimiento":
+        return "bg-yellow-100 text-yellow-800";
+      case "inactivo":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getEstadoLabel = (estado: string) => {
+    switch (estado) {
+      case "activo":
+        return "Activo";
+      case "mantenimiento":
+        return "Mantenimiento";
+      case "inactivo":
+        return "Inactivo";
+      default:
+        return estado;
+    }
   };
 
   const handleVerDetalles = (id: number) => {
@@ -95,31 +128,33 @@ const Categorias = () => {
           </div>
 
           {/* Filter Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-admin-text-primary">Prioridad</label>
-              <Select value={prioridadFilter} onValueChange={setPrioridadFilter}>
+              <Label className="text-sm font-medium text-admin-text-primary">Sucursal</Label>
+              <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar prioridad" />
+                  <SelectValue placeholder="Todas las sucursales" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Alta">Alta</SelectItem>
-                  <SelectItem value="Media">Media</SelectItem>
-                  <SelectItem value="Baja">Baja</SelectItem>
+                  {sucursales.map((sucursal) => (
+                    <SelectItem key={sucursal.id} value={sucursal.id}>
+                      {sucursal.nombre}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-admin-text-primary">Estado</label>
+              <Label className="text-sm font-medium text-admin-text-primary">Estado</Label>
               <Select value={estadoFilter} onValueChange={setEstadoFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar estado" />
+                  <SelectValue placeholder="Todos los estados" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Activa">Activa</SelectItem>
-                  <SelectItem value="Mantenimiento">En Mantenimiento</SelectItem>
-                  <SelectItem value="Inactiva">Inactiva</SelectItem>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -146,32 +181,16 @@ const Categorias = () => {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between gap-2">
                 <span className="text-admin-text-primary truncate leading-relaxed pb-1">{categoria.nombre}</span>
-                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
-                  categoria.estado === 'Activa' 
-                    ? 'bg-green-100 text-green-800' 
-                    : categoria.estado === 'Mantenimiento'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {categoria.estado}
+                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${getEstadoColor(categoria.estado)}`}>
+                  {getEstadoLabel(categoria.estado)}
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center space-x-2 min-w-0">
-                  <Tag className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
-                  <span className="text-sm text-admin-text-secondary truncate">Prioridad:</span>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium whitespace-nowrap flex-shrink-0">
-                  Media
-                </span>
-              </div>
-
               <div className="flex items-center space-x-2 min-w-0">
                 <Clock className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-admin-text-primary">{categoria.tiempoEsperaEstimado} min</p>
+                  <p className="text-sm font-medium text-admin-text-primary">{categoria.tiempoEsperaEstimado} minutos</p>
                   <p className="text-xs text-admin-text-muted">Tiempo estimado</p>
                 </div>
               </div>
