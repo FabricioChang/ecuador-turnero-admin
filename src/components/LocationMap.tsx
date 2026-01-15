@@ -1,5 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { useEffect, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ const ECUADOR_BOUNDS: L.LatLngBoundsExpression = [
   [1.5, -75.0],  // Northeast
 ];
 
-const ECUADOR_CENTER: L.LatLngExpression = [-1.8312, -78.1834];
+const ECUADOR_CENTER: L.LatLngTuple = [-1.8312, -78.1834];
 
 interface LocationData {
   lat: number;
@@ -37,37 +36,11 @@ interface LocationMapProps {
   initialPosition?: { lat: number; lng: number } | null;
 }
 
-// Component to handle map clicks
-function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click: (e) => {
-      const { lat, lng } = e.latlng;
-      // Check if click is within Ecuador bounds
-      if (lat >= -5.0 && lat <= 1.5 && lng >= -81.5 && lng <= -75.0) {
-        onLocationSelect(lat, lng);
-      }
-    },
-  });
-  return null;
-}
-
-// Component to recenter map
-function MapRecenter({ position }: { position: [number, number] | null }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (position) {
-      map.setView(position, 15);
-    }
-  }, [position, map]);
-  
-  return null;
-}
-
 const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapProps) => {
-  const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
-    initialPosition ? [initialPosition.lat, initialPosition.lng] : null
-  );
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
 
@@ -116,11 +89,76 @@ const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapProps) =>
     }
   }, []);
 
+  const updateMarker = useCallback((lat: number, lng: number) => {
+    if (!mapRef.current) return;
+
+    if (markerRef.current) {
+      markerRef.current.setLatLng([lat, lng]);
+    } else {
+      markerRef.current = L.marker([lat, lng], { icon: defaultIcon }).addTo(mapRef.current);
+    }
+    
+    mapRef.current.setView([lat, lng], 15);
+  }, []);
+
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
-    setMarkerPosition([lat, lng]);
-    const locationData = await reverseGeocode(lat, lng);
-    onLocationSelect(locationData);
-  }, [reverseGeocode, onLocationSelect]);
+    // Check if click is within Ecuador bounds
+    if (lat >= -5.0 && lat <= 1.5 && lng >= -81.5 && lng <= -75.0) {
+      updateMarker(lat, lng);
+      const locationData = await reverseGeocode(lat, lng);
+      onLocationSelect(locationData);
+    }
+  }, [updateMarker, reverseGeocode, onLocationSelect]);
+
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    // Create map
+    const map = L.map(mapContainerRef.current, {
+      center: ECUADOR_CENTER,
+      zoom: 7,
+      maxBounds: ECUADOR_BOUNDS,
+      minZoom: 6,
+      maxBoundsViscosity: 1.0,
+    });
+
+    // Add tile layer
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // Handle clicks
+    map.on("click", (e: L.LeafletMouseEvent) => {
+      handleMapClick(e.latlng.lat, e.latlng.lng);
+    });
+
+    mapRef.current = map;
+
+    // Set initial marker if provided
+    if (initialPosition) {
+      updateMarker(initialPosition.lat, initialPosition.lng);
+    }
+
+    // Cleanup
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update click handler when dependencies change
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    mapRef.current.off("click");
+    mapRef.current.on("click", (e: L.LeafletMouseEvent) => {
+      handleMapClick(e.latlng.lat, e.latlng.lng);
+    });
+  }, [handleMapClick]);
 
   const handleUseCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -135,7 +173,7 @@ const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapProps) =>
         
         // Check if within Ecuador
         if (latitude >= -5.0 && latitude <= 1.5 && longitude >= -81.5 && longitude <= -75.0) {
-          setMarkerPosition([latitude, longitude]);
+          updateMarker(latitude, longitude);
           const locationData = await reverseGeocode(latitude, longitude);
           onLocationSelect(locationData);
         } else {
@@ -150,7 +188,7 @@ const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapProps) =>
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  }, [reverseGeocode, onLocationSelect]);
+  }, [updateMarker, reverseGeocode, onLocationSelect]);
 
   return (
     <div className="space-y-2">
@@ -183,26 +221,7 @@ const LocationMap = ({ onLocationSelect, initialPosition }: LocationMapProps) =>
           </div>
         )}
         
-        <MapContainer
-          center={ECUADOR_CENTER}
-          zoom={7}
-          maxBounds={ECUADOR_BOUNDS}
-          minZoom={6}
-          maxBoundsViscosity={1.0}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          
-          <MapClickHandler onLocationSelect={handleMapClick} />
-          <MapRecenter position={markerPosition} />
-          
-          {markerPosition && (
-            <Marker position={markerPosition} icon={defaultIcon} />
-          )}
-        </MapContainer>
+        <div ref={mapContainerRef} className="h-full w-full" />
       </div>
     </div>
   );
