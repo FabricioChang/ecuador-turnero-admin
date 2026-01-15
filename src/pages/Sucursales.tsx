@@ -35,8 +35,7 @@ const Sucursales = () => {
   // Filtrar cantones por provincia seleccionada
   const cantonesFiltrados = useMemo(() => {
     if (!provinciaFilter) return cantones;
-    const provinciaSeleccionada = provincias.find(p => p.nombre === provinciaFilter);
-    return cantones.filter(c => c.provincia_id === provinciaSeleccionada?.id);
+    return cantones.filter((c: any) => c.provincia === provinciaFilter);
   }, [provinciaFilter, cantones, provincias]);
 
   // Datos desde la base de datos
