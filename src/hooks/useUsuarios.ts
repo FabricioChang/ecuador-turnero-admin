@@ -94,3 +94,6 @@ export const useMiembroCuenta = (usuarioId: string, cuentaId: string) => {
     enabled: !!usuarioId && !!cuentaId,
   });
 };
+
+// Alias for backward compatibility
+export const useUsuarios = useUsuariosMiembros;

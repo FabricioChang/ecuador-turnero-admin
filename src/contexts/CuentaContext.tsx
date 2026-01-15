@@ -11,6 +11,7 @@ interface CuentaContextType {
   setMiembro: (miembro: MiembroCuenta | null) => void;
   isLoading: boolean;
   logout: () => void;
+  clearSession: () => void;
 }
 
 const CuentaContext = createContext<CuentaContextType | undefined>(undefined);
@@ -68,6 +69,8 @@ export const CuentaProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('miembro');
   };
 
+  const clearSession = logout;
+
   return (
     <CuentaContext.Provider value={{ 
       cuenta, 
@@ -77,7 +80,8 @@ export const CuentaProvider = ({ children }: { children: ReactNode }) => {
       miembro,
       setMiembro,
       isLoading, 
-      logout 
+      logout,
+      clearSession 
     }}>
       {children}
     </CuentaContext.Provider>
