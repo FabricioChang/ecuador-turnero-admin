@@ -51,12 +51,12 @@ export const useTurnoKPIs = () => {
 
       // Get counts for each status using separate count queries
       const [enEsperaResult, atendidosResult, perdidosResult, reagendadosResult, totalResult] = await Promise.all([
-        // En espera: pendiente + en_atencion
+        // En espera: pendiente + en_atencion + espera + en_espera
         supabaseExternal
           .from("turno")
           .select("*", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id)
-          .in("estado", ["pendiente", "en_atencion", "espera"]),
+          .in("estado", ["pendiente", "en_atencion", "espera", "en_espera"]),
         
         // Atendidos
         supabaseExternal

@@ -173,9 +173,10 @@ const Turnos = () => {
     const variants = {
       pendiente: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600", label: "Pendiente" },
       en_atencion: { variant: "default" as const, icon: RefreshCw, color: "text-blue-600", label: "En Atención" },
+      en_espera: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600", label: "En Espera" },
+      espera: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600", label: "En Espera" },
       atendido: { variant: "default" as const, icon: CheckCircle, color: "text-green-600", label: "Atendido" },
       cancelado: { variant: "destructive" as const, icon: XCircle, color: "text-red-600", label: "Cancelado" },
-      espera: { variant: "secondary" as const, icon: Clock, color: "text-yellow-600", label: "En Espera" },
       perdido: { variant: "destructive" as const, icon: XCircle, color: "text-red-600", label: "Perdido" },
       reagendado: { variant: "outline" as const, icon: Calendar, color: "text-blue-600", label: "Reagendado" }
     };
@@ -184,7 +185,7 @@ const Turnos = () => {
       variant: "outline" as const,
       icon: Clock,
       color: "text-gray-600",
-      label: estado
+      label: estado.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
     };
     
     const Icon = config.icon;
