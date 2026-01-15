@@ -1,23 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabaseExternal } from "@/lib/supabase-external";
+import { supabase } from "@/integrations/supabase/client";
+
+export interface Permission {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+}
 
 export const usePermissions = () => {
   return useQuery({
     queryKey: ["permissions"],
     queryFn: async () => {
-      const { data, error } = await (supabaseExternal as any)
-        .from("permiso")
-        .select("*");
+      const { data, error } = await supabase
+        .from("permissions")
+        .select("*")
+        .order("category", { ascending: true });
 
       if (error) throw error;
       
-      // Map to expected format
-      return (data || []).map((p: any) => ({
-        id: p.id,
-        name: p.codigo,
-        description: p.codigo,
-        category: "general"
-      }));
+      return (data || []) as Permission[];
     },
   });
 };
