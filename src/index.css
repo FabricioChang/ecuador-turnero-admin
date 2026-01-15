@@ -58,6 +58,14 @@ All colors MUST be HSL.
     --admin-text-secondary: 0 0% 45%;
     --admin-text-muted: 0 0% 60%;
 
+    /* Chart Colors */
+    --chart-1: 210 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 55%;
+    --chart-5: 340 70% 55%;
+    --chart-6: 190 70% 45%;
+
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
@@ -110,6 +118,14 @@ All colors MUST be HSL.
     --admin-text-primary: 0 0% 95%;
     --admin-text-secondary: 0 0% 65%;
     --admin-text-muted: 0 0% 50%;
+
+    /* Chart Colors - Dark Mode */
+    --chart-1: 210 80% 60%;
+    --chart-2: 160 70% 55%;
+    --chart-3: 30 90% 60%;
+    --chart-4: 280 75% 65%;
+    --chart-5: 340 80% 60%;
+    --chart-6: 190 80% 55%;
   }
 }
 

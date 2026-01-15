@@ -16,9 +16,16 @@ export const useReportes = (
     queryFn: async () => {
       if (!cuenta?.id) return null;
 
+      // Query with joins to get related data
       let query = (supabaseExternal as any)
         .from("turno")
-        .select("*")
+        .select(`
+          *,
+          categoria:categoria(id, nombre, color),
+          sucursal:sucursal(id, nombre, region, provincia, ciudad),
+          kiosko:kiosko(id, codigo, nombre),
+          cliente:cliente(cedula, nombres, apellidos)
+        `)
         .eq("cuenta_id", cuenta.id)
         .gte("emitido_en", dateFrom.toISOString())
         .lte("emitido_en", dateTo.toISOString());
@@ -51,13 +58,22 @@ export const useReportes = (
         ? Math.round(tiemposEspera.reduce((a: number, b: number) => a + b, 0) / tiemposEspera.length / 60)
         : 0;
 
+      const tiemposAtencion = turnos
+        .filter((t: any) => t.tiempo_atencion !== null)
+        .map((t: any) => t.tiempo_atencion as number);
+      
+      const tiempoPromedioAtencion = tiemposAtencion.length > 0
+        ? Math.round(tiemposAtencion.reduce((a: number, b: number) => a + b, 0) / tiemposAtencion.length / 60)
+        : 0;
+
       const eficiencia = totalTurnos > 0
         ? Math.round((turnosCompletados / totalTurnos) * 100)
         : 0;
 
       // Group by day
       const turnosPorDia = turnos.reduce((acc: any[], turno: any) => {
-        const fecha = turno.emitido_dia;
+        const fecha = turno.emitido_dia || turno.emitido_en?.split('T')[0];
+        if (!fecha) return acc;
         const existing = acc.find(d => d.fecha === fecha);
         if (existing) {
           existing.turnos++;
@@ -72,35 +88,93 @@ export const useReportes = (
         return acc;
       }, []).sort((a: any, b: any) => a.fecha.localeCompare(b.fecha));
 
-      // Group by category
+      // Group by category with real names
       const distribucionCategorias = turnos.reduce((acc: any[], turno: any) => {
-        const categoriaId = turno.categoria_id;
-        const existing = acc.find((c: any) => c.id === categoriaId);
+        const catId = turno.categoria_id;
+        const catNombre = turno.categoria?.nombre || 'Sin categoría';
+        const catColor = turno.categoria?.color;
+        const existing = acc.find((c: any) => c.id === catId);
         if (existing) {
           existing.turnos++;
         } else {
           acc.push({
-            id: categoriaId,
-            nombre: `Categoría ${categoriaId.slice(0, 8)}`,
+            id: catId,
+            nombre: catNombre,
+            color: catColor,
             turnos: 1
           });
         }
         return acc;
       }, []);
 
+      // Group by sucursal
+      const actividadSucursales = turnos.reduce((acc: any[], turno: any) => {
+        const sucId = turno.sucursal_id;
+        const sucNombre = turno.sucursal?.nombre || 'Sin sucursal';
+        const existing = acc.find((s: any) => s.id === sucId);
+        if (existing) {
+          existing.turnos++;
+        } else {
+          acc.push({
+            id: sucId,
+            nombre: sucNombre,
+            turnos: 1
+          });
+        }
+        return acc;
+      }, []).sort((a: any, b: any) => b.turnos - a.turnos).slice(0, 10);
+
+      // Group by kiosko
+      const actividadKioskos = turnos.reduce((acc: any[], turno: any) => {
+        const kioId = turno.kiosko_id;
+        const kioNombre = turno.kiosko?.nombre || turno.kiosko?.codigo || 'Sin kiosko';
+        const existing = acc.find((k: any) => k.id === kioId);
+        if (existing) {
+          existing.turnos++;
+        } else {
+          acc.push({
+            id: kioId,
+            nombre: kioNombre,
+            turnos: 1
+          });
+        }
+        return acc;
+      }, []).sort((a: any, b: any) => b.turnos - a.turnos).slice(0, 10);
+
+      // Group wait times by hour
+      const tiemposEsperaPorHora = turnos.reduce((acc: any[], turno: any) => {
+        if (!turno.emitido_en || turno.tiempo_espera === null) return acc;
+        const hora = new Date(turno.emitido_en).getHours();
+        const horaStr = `${hora.toString().padStart(2, '0')}:00`;
+        const existing = acc.find((h: any) => h.hora === horaStr);
+        if (existing) {
+          existing.tiempos.push(turno.tiempo_espera);
+          existing.tiempoEspera = Math.round(
+            existing.tiempos.reduce((a: number, b: number) => a + b, 0) / existing.tiempos.length / 60
+          );
+        } else {
+          acc.push({
+            hora: horaStr,
+            tiempos: [turno.tiempo_espera],
+            tiempoEspera: Math.round(turno.tiempo_espera / 60)
+          });
+        }
+        return acc;
+      }, []).sort((a: any, b: any) => a.hora.localeCompare(b.hora));
+
       return {
         metricas: {
           totalTurnos,
           turnosCompletados,
           tiempoPromedioEspera,
-          tiempoPromedioAtencion: Math.round(tiempoPromedioEspera * 0.8),
+          tiempoPromedioAtencion,
           eficiencia
         },
         turnosPorDia,
         distribucionCategorias,
-        actividadSucursales: [],
-        actividadKioskos: [],
-        tiemposEsperaPorHora: [],
+        actividadSucursales,
+        actividadKioskos,
+        tiemposEsperaPorHora,
         turnosRaw: turnos
       };
     },
