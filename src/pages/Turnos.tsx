@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useTurnos } from "@/hooks/useTurnos";
+import { useTurnosWithPagination, useTurnoKPIs } from "@/hooks/useTurnosWithPagination";
 import { useRegiones } from "@/hooks/useRegiones";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
@@ -22,29 +22,60 @@ import {
   Search, 
   Filter, 
   RefreshCw,
-  Eye
+  Eye,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 const Turnos = () => {
-  const { data: turnosDB = [], isLoading } = useTurnos();
+  const { toast } = useToast();
   const { regiones } = useRegiones();
   const { data: provincias = [] } = useProvincias();
   const { data: cantones = [] } = useCantones();
   const { data: sucursales = [] } = useSucursales();
   const { data: categorias = [] } = useCategorias();
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  
+  // Filters state
   const [busqueda, setBusqueda] = useState("");
+  const [debouncedBusqueda, setDebouncedBusqueda] = useState("");
   const [regionFilter, setRegionFilter] = useState("all");
   const [provinciaFilter, setProvinciaFilter] = useState("all");
   const [ciudadFilter, setCiudadFilter] = useState("all");
   const [sucursalFilter, setSucursalFilter] = useState("all");
   const [estadoFilter, setEstadoFilter] = useState("all");
   const [categoriaFilter, setCategoriaFilter] = useState("all");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
+  
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<any | null>(null);
   const [modalDetalle, setModalDetalle] = useState(false);
-  const { toast } = useToast();
+
+  // KPIs from database
+  const { data: kpis, refetch: refetchKPIs } = useTurnoKPIs();
+
+  // Paginated turnos
+  const { data: turnosResult, isLoading, refetch: refetchTurnos } = useTurnosWithPagination(
+    currentPage,
+    pageSize,
+    {
+      sucursalId: sucursalFilter,
+      categoriaId: categoriaFilter,
+      estado: estadoFilter,
+      busqueda: debouncedBusqueda,
+    }
+  );
+
+  // Debounce search
+  const handleBusquedaChange = (value: string) => {
+    setBusqueda(value);
+    // Simple debounce using setTimeout
+    setTimeout(() => {
+      setDebouncedBusqueda(value);
+      setCurrentPage(1);
+    }, 300);
+  };
 
   // Filtrar provincias por región
   const provinciasFiltradas = useMemo(() => {
@@ -88,20 +119,39 @@ const Turnos = () => {
     setProvinciaFilter("all");
     setCiudadFilter("all");
     setSucursalFilter("all");
+    setCurrentPage(1);
   };
 
   const handleProvinciaChange = (value: string) => {
     setProvinciaFilter(value);
     setCiudadFilter("all");
     setSucursalFilter("all");
+    setCurrentPage(1);
   };
 
   const handleCiudadChange = (value: string) => {
     setCiudadFilter(value);
     setSucursalFilter("all");
+    setCurrentPage(1);
   };
 
-  const turnos = turnosDB.map((t: any) => ({
+  const handleSucursalChange = (value: string) => {
+    setSucursalFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleEstadoChange = (value: string) => {
+    setEstadoFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleCategoriaChange = (value: string) => {
+    setCategoriaFilter(value);
+    setCurrentPage(1);
+  };
+
+  // Transform turnos for display
+  const turnos = (turnosResult?.data ?? []).map((t: any) => ({
     id: t.id,
     numero: t.numero,
     cliente: {
@@ -110,7 +160,7 @@ const Turnos = () => {
     },
     sucursal: t.sucursal?.nombre || "",
     sucursal_id: t.sucursal_id,
-    kiosko: t.kiosko?.nombre || "Sin kiosko",
+    kiosko: t.kiosko?.codigo || "Sin kiosko",
     categoria: t.categoria?.nombre || "",
     categoria_id: t.categoria_id,
     estado: t.estado,
@@ -118,47 +168,6 @@ const Turnos = () => {
     horaCreacion: new Date(t.emitido_en || t.fecha_creacion).toLocaleTimeString(),
     tiempoEspera: t.tiempo_espera_seg ? Math.round(t.tiempo_espera_seg / 60) : 0
   }));
-
-  // Calcular KPIs
-  const kpis = {
-    enEspera: turnos.filter(t => t.estado === 'pendiente' || t.estado === 'en_atencion' || t.estado === 'espera').length,
-    atendidos: turnos.filter(t => t.estado === 'atendido').length,
-    perdidos: turnos.filter(t => t.estado === 'cancelado' || t.estado === 'perdido').length,
-    reagendados: turnos.filter(t => t.estado === 'reagendado').length
-  };
-
-  // Filtrar turnos
-  const turnosFiltrados = turnos.filter(turno => {
-    // Búsqueda por identificador
-    if (busqueda && !turno.numero.toLowerCase().includes(busqueda.toLowerCase())) {
-      return false;
-    }
-    
-    // Filtro por sucursal
-    if (sucursalFilter !== "all" && turno.sucursal_id !== sucursalFilter) {
-      return false;
-    }
-    
-    // Filtros jerárquicos si no hay sucursal específica
-    if (sucursalFilter === "all" && sucursalesFiltradas.length > 0) {
-      const sucursalIds = sucursalesFiltradas.map((s: any) => s.id);
-      if (!sucursalIds.includes(turno.sucursal_id)) {
-        return false;
-      }
-    }
-    
-    // Filtro por estado
-    if (estadoFilter !== "all" && turno.estado !== estadoFilter) {
-      return false;
-    }
-    
-    // Filtro por categoría
-    if (categoriaFilter !== "all" && turno.categoria_id !== categoriaFilter) {
-      return false;
-    }
-    
-    return true;
-  });
 
   const getEstadoBadge = (estado: string) => {
     const variants = {
@@ -190,14 +199,33 @@ const Turnos = () => {
 
   const limpiarFiltros = () => {
     setBusqueda("");
+    setDebouncedBusqueda("");
     setRegionFilter("all");
     setProvinciaFilter("all");
     setCiudadFilter("all");
     setSucursalFilter("all");
     setEstadoFilter("all");
     setCategoriaFilter("all");
-    setFechaDesde("");
-    setFechaHasta("");
+    setCurrentPage(1);
+  };
+
+  const handleRefresh = () => {
+    refetchKPIs();
+    refetchTurnos();
+    toast({
+      title: "Actualizado",
+      description: "Los datos se han actualizado correctamente",
+    });
+  };
+
+  // Pagination controls
+  const totalPages = turnosResult?.totalPages ?? 1;
+  const totalCount = turnosResult?.count ?? 0;
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   return (
@@ -208,7 +236,7 @@ const Turnos = () => {
           <h1 className="text-2xl font-semibold text-admin-text-primary">Gestión de Turnos</h1>
           <p className="text-admin-text-secondary">Administra y monitorea los turnos en tiempo real</p>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button className="flex items-center gap-2" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4" />
           Actualizar
         </Button>
@@ -222,7 +250,7 @@ const Turnos = () => {
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-admin-text-primary">{kpis.enEspera}</div>
+            <div className="text-2xl font-bold text-admin-text-primary">{kpis?.enEspera ?? 0}</div>
             <p className="text-xs text-admin-text-muted">Turnos pendientes</p>
           </CardContent>
         </Card>
@@ -233,7 +261,7 @@ const Turnos = () => {
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-admin-text-primary">{kpis.atendidos}</div>
+            <div className="text-2xl font-bold text-admin-text-primary">{kpis?.atendidos ?? 0}</div>
             <p className="text-xs text-admin-text-muted">Turnos completados</p>
           </CardContent>
         </Card>
@@ -244,7 +272,7 @@ const Turnos = () => {
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-admin-text-primary">{kpis.perdidos}</div>
+            <div className="text-2xl font-bold text-admin-text-primary">{kpis?.perdidos ?? 0}</div>
             <p className="text-xs text-admin-text-muted">No se presentaron</p>
           </CardContent>
         </Card>
@@ -255,7 +283,7 @@ const Turnos = () => {
             <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-admin-text-primary">{kpis.reagendados}</div>
+            <div className="text-2xl font-bold text-admin-text-primary">{kpis?.reagendados ?? 0}</div>
             <p className="text-xs text-admin-text-muted">Reprogramados</p>
           </CardContent>
         </Card>
@@ -274,9 +302,9 @@ const Turnos = () => {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-admin-text-muted" />
               <Input
-                placeholder="Buscar por identificador..."
+                placeholder="Buscar por número..."
                 value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
+                onChange={(e) => handleBusquedaChange(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -325,7 +353,7 @@ const Turnos = () => {
               </SelectContent>
             </Select>
 
-            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+            <Select value={sucursalFilter} onValueChange={handleSucursalChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Sucursal" />
               </SelectTrigger>
@@ -337,7 +365,7 @@ const Turnos = () => {
               </SelectContent>
             </Select>
 
-            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+            <Select value={estadoFilter} onValueChange={handleEstadoChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
@@ -350,7 +378,7 @@ const Turnos = () => {
               </SelectContent>
             </Select>
 
-            <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+            <Select value={categoriaFilter} onValueChange={handleCategoriaChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Categoría" />
               </SelectTrigger>
@@ -373,7 +401,7 @@ const Turnos = () => {
       <Card className="bg-admin-surface border-admin-border-light">
         <CardHeader>
           <CardTitle className="text-admin-text-primary">
-            Lista de Turnos ({turnosFiltrados.length})
+            Lista de Turnos ({totalCount} total)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -398,14 +426,14 @@ const Turnos = () => {
                       Cargando turnos...
                     </TableCell>
                   </TableRow>
-                ) : turnosFiltrados.length === 0 ? (
+                ) : turnos.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8">
                       No se encontraron turnos con los filtros seleccionados
                     </TableCell>
                   </TableRow>
                 ) : (
-                  turnosFiltrados.map((turno) => (
+                  turnos.map((turno) => (
                     <TableRow key={turno.id}>
                       <TableCell className="font-medium">{turno.numero}</TableCell>
                       <TableCell>
@@ -442,6 +470,60 @@ const Turnos = () => {
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-admin-border-light">
+              <p className="text-sm text-admin-text-muted">
+                Mostrando {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} de {totalCount} turnos
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => goToPage(pageNum)}
+                        className="w-8"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
