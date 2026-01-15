@@ -66,18 +66,27 @@ const Roles = () => {
     }
   }, [categories, selectedCategory]);
 
-  // Sync local permissions when role changes
+  // Sync local permissions when role changes (admin gets all permissions)
   useEffect(() => {
-    if (rolePermissions) {
+    const currentRole = customRoles.find(r => r.id === selectedRoleId);
+    if (currentRole?.nombre.toLowerCase() === "admin") {
+      // Admin role always has all permissions
+      setLocalPermissions(new Set(permissions.map(p => p.id)));
+      setHasChanges(false);
+    } else if (rolePermissions) {
       setLocalPermissions(new Set(rolePermissions));
       setHasChanges(false);
     }
-  }, [rolePermissions]);
+  }, [rolePermissions, selectedRoleId, customRoles, permissions]);
 
   const selectedRole = customRoles.find(r => r.id === selectedRoleId);
+  const isAdminRole = selectedRole?.nombre.toLowerCase() === "admin";
   const categoryPermissions = selectedCategory ? permissionsByCategory[selectedCategory] || [] : [];
 
   const handleTogglePermission = (permissionId: string) => {
+    // Admin role permissions cannot be modified
+    if (isAdminRole) return;
+    
     const newSelected = new Set(localPermissions);
     if (newSelected.has(permissionId)) {
       newSelected.delete(permissionId);
@@ -278,6 +287,7 @@ const Roles = () => {
                         <Switch
                           id={`perm-${permission.id}`}
                           checked={isEnabled}
+                          disabled={isAdminRole}
                           onCheckedChange={() => handleTogglePermission(permission.id)}
                         />
                       </div>
