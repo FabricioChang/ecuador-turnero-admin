@@ -4,28 +4,124 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Search } from "lucide-react";
-import { useUsuarios } from "@/hooks/useUsuarios";
+import { Plus, Search, Trash2, Eye } from "lucide-react";
+import { useUsuarios, type MiembroConUsuario } from "@/hooks/useUsuarios";
+import { useCreateUsuario, useDeleteUsuarioMiembro } from "@/hooks/useUsuariosMutations";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Usuarios() {
-  const { data: usuariosDB = [], isLoading } = useUsuarios();
+  const { data: miembrosDB = [], isLoading } = useUsuarios();
+  const createUsuario = useCreateUsuario();
+  const deleteUsuario = useDeleteUsuarioMiembro();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedMiembro, setSelectedMiembro] = useState<MiembroConUsuario | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => { document.title = "Usuarios administrativos | Panel"; }, []);
+  // Form state
+  const [formData, setFormData] = useState({
+    email: "",
+    nombre: "",
+    password: "",
+  });
 
-  const usuariosFiltrados = usuariosDB.filter((usuario: any) => {
+  useEffect(() => {
+    document.title = "Usuarios administrativos | Panel";
+  }, []);
+
+  const miembrosFiltrados = miembrosDB.filter((miembro: MiembroConUsuario) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
-    return usuario.email?.toLowerCase().includes(searchLower) || usuario.nombre?.toLowerCase().includes(searchLower);
+    const email = miembro.usuario?.email?.toLowerCase() || "";
+    const nombre = miembro.usuario?.nombre?.toLowerCase() || "";
+    return email.includes(searchLower) || nombre.includes(searchLower);
   });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.email || !formData.nombre || !formData.password) {
+      toast({
+        title: "Error",
+        description: "Todos los campos son requeridos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await createUsuario.mutateAsync(formData);
+      toast({
+        title: "Usuario creado",
+        description: "El usuario ha sido agregado exitosamente",
+      });
+      setIsDialogOpen(false);
+      setFormData({ email: "", nombre: "", password: "" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo crear el usuario",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedMiembro) return;
+
+    try {
+      await deleteUsuario.mutateAsync(selectedMiembro.id);
+      toast({
+        title: "Usuario eliminado",
+        description: "El usuario ha sido removido de la cuenta",
+      });
+      setDeleteDialogOpen(false);
+      setSelectedMiembro(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo eliminar el usuario",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getEstadoBadge = (estado: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      activo: "default",
+      inactivo: "secondary",
+      pendiente: "outline",
+    };
+    return <Badge variant={variants[estado] || "outline"}>{estado}</Badge>;
+  };
 
   return (
     <main className="p-6 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Usuarios</h1>
-        <Button onClick={() => toast({ title: "Próximamente", description: "Crear usuario" })}>
-          <Plus className="mr-2 h-4 w-4" />Nuevo usuario
+        <Button onClick={() => setIsDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo usuario
         </Button>
       </header>
 
@@ -36,29 +132,83 @@ export default function Usuarios() {
         <CardContent>
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar por email o nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            <Input
+              placeholder="Buscar por email o nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Roles</TableHead>
                 <TableHead>Super Admin</TableHead>
                 <TableHead>Creado</TableHead>
+                <TableHead className="w-[100px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center">Cargando...</TableCell></TableRow>
-              ) : usuariosFiltrados.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center">No se encontraron usuarios</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center">
+                    Cargando...
+                  </TableCell>
+                </TableRow>
+              ) : miembrosFiltrados.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center">
+                    No se encontraron usuarios
+                  </TableCell>
+                </TableRow>
               ) : (
-                usuariosFiltrados.map((usuario: any) => (
-                  <TableRow key={usuario.id}>
-                    <TableCell>{usuario.email}</TableCell>
-                    <TableCell>{usuario.nombre || "—"}</TableCell>
-                    <TableCell>{usuario.super_admin ? "Sí" : "No"}</TableCell>
-                    <TableCell>{new Date(usuario.creado_en).toLocaleDateString()}</TableCell>
+                miembrosFiltrados.map((miembro: MiembroConUsuario) => (
+                  <TableRow key={miembro.id}>
+                    <TableCell>{miembro.usuario?.email || "—"}</TableCell>
+                    <TableCell>{miembro.usuario?.nombre || "—"}</TableCell>
+                    <TableCell>{getEstadoBadge(miembro.estado)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {miembro.roles && miembro.roles.length > 0 ? (
+                          miembro.roles.map((r, idx) => (
+                            <Badge key={idx} variant="outline">
+                              {r.rol?.nombre || "—"}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Sin roles</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {miembro.usuario?.super_admin ? (
+                        <Badge variant="default">Sí</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">No</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {miembro.creado_en
+                        ? new Date(miembro.creado_en).toLocaleDateString()
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedMiembro(miembro);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -66,6 +216,91 @@ export default function Usuarios() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog para crear nuevo usuario */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuevo Usuario</DialogTitle>
+            <DialogDescription>
+              Agrega un nuevo usuario administrativo a la cuenta.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="usuario@ejemplo.com"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nombre">Nombre</Label>
+                <Input
+                  id="nombre"
+                  placeholder="Nombre completo"
+                  value={formData.nombre}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nombre: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={createUsuario.isPending}>
+                {createUsuario.isPending ? "Creando..." : "Crear usuario"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para confirmar eliminación */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción removerá al usuario "{selectedMiembro?.usuario?.nombre || selectedMiembro?.usuario?.email}" 
+              de la cuenta. El usuario no será eliminado permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
