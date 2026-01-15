@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Layers3, Save, Search, Filter } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useRegiones } from "@/hooks/useRegiones";
-import { useProvincias } from "@/hooks/useProvincias";
-import { useCantones } from "@/hooks/useCantones";
+import { useProvinciasDB } from "@/hooks/useProvinciasDB";
+import { useCantonesDB } from "@/hooks/useCantonesDB";
 import { useSucursales } from "@/hooks/useSucursales";
 import { usePantallas } from "@/hooks/usePantallas";
 import { usePublicidad } from "@/hooks/usePublicidad";
@@ -26,16 +27,24 @@ const Pantallas = () => {
   const [provinciaFilter, setProvinciaFilter] = useState("all");
   const [ciudadFilter, setCiudadFilter] = useState("all");
   const [sucursalFilter, setSucursalFilter] = useState("all");
+  const [estadoFilter, setEstadoFilter] = useState("all");
   
   // Filtros para el modal de publicidad
   const [modalSearchTerm, setModalSearchTerm] = useState("");
 
   const { regiones } = useRegiones();
-  const { data: provincias = [] } = useProvincias();
-  const { data: cantones = [] } = useCantones();
+  const { data: provincias = [] } = useProvinciasDB();
   const { data: sucursalesDB = [] } = useSucursales();
   const { data: pantallasDB = [], isLoading } = usePantallas();
   const { data: publicidadDB = [] } = usePublicidad();
+
+  // Obtener el ID de provincia seleccionada
+  const provinciaSeleccionada = useMemo(() => {
+    return provincias.find((p: any) => p.nombre === provinciaFilter);
+  }, [provinciaFilter, provincias]);
+
+  // Cargar cantones filtrados por provincia
+  const { data: cantones = [] } = useCantonesDB(provinciaSeleccionada?.id);
 
   useEffect(() => {
     document.title = "Pantallas | Panel Admin";
@@ -48,12 +57,6 @@ const Pantallas = () => {
     if (!regionData) return provincias;
     return provincias.filter((p: any) => regionData.provincias.includes(p.nombre));
   }, [regionFilter, provincias, regiones]);
-
-  // Filtrar ciudades por provincia
-  const ciudadesFiltradas = useMemo(() => {
-    if (provinciaFilter === "all") return cantones;
-    return cantones.filter((c: any) => c.provincia === provinciaFilter);
-  }, [provinciaFilter, cantones]);
 
   // Filtrar sucursales jerárquicamente
   const sucursalesFiltradas = useMemo(() => {
@@ -134,9 +137,12 @@ const Pantallas = () => {
       const matchesSearch = pantalla.identificador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            pantalla.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
       
+      // Filtro de estado
+      const matchesEstado = estadoFilter === "all" || pantalla.estado === estadoFilter;
+      
       // Filtro por sucursal directa (tiene prioridad)
       if (sucursalFilter !== "all") {
-        return matchesSearch && pantalla.sucursal_id === sucursalFilter;
+        return matchesSearch && pantalla.sucursal_id === sucursalFilter && matchesEstado;
       }
       
       // Filtro por región
@@ -154,9 +160,9 @@ const Pantallas = () => {
       // Filtro por ciudad
       const matchesCiudad = ciudadFilter === "all" || pantalla.sucursal?.ciudad === ciudadFilter;
       
-      return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad;
+      return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesEstado;
     });
-  }, [pantallasDB, searchTerm, sucursalFilter, regionFilter, provinciaFilter, ciudadFilter, regiones]);
+  }, [pantallasDB, searchTerm, sucursalFilter, regionFilter, provinciaFilter, ciudadFilter, estadoFilter, regiones]);
 
   return (
     <section className="space-y-6">
@@ -186,75 +192,107 @@ const Pantallas = () => {
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Select value={regionFilter} onValueChange={handleRegionChange}>
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Región" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light">
-                <SelectItem value="all">Todas las regiones</SelectItem>
-                {regiones.map(r => (
-                  <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Región</Label>
+              <Select value={regionFilter} onValueChange={handleRegionChange}>
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Región" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light">
+                  <SelectItem value="all">Todas las regiones</SelectItem>
+                  {regiones.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select 
-              value={provinciaFilter} 
-              onValueChange={handleProvinciaChange}
-              disabled={regionFilter === "all"}
-            >
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Provincia" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light">
-                <SelectItem value="all">Todas las provincias</SelectItem>
-                {provinciasFiltradas.map((prov: any) => (
-                  <SelectItem key={prov.id} value={prov.nombre}>{prov.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Provincia</Label>
+              <Select 
+                value={provinciaFilter} 
+                onValueChange={handleProvinciaChange}
+                disabled={regionFilter === "all"}
+              >
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Provincia" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light z-50">
+                  <SelectItem value="all">Todas las provincias</SelectItem>
+                  {provinciasFiltradas.map((prov: any) => (
+                    <SelectItem key={prov.id} value={prov.nombre}>{prov.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select 
-              value={ciudadFilter} 
-              onValueChange={handleCiudadChange}
-              disabled={provinciaFilter === "all"}
-            >
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Ciudad" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light">
-                <SelectItem value="all">Todas las ciudades</SelectItem>
-                {ciudadesFiltradas.map((canton: any) => (
-                  <SelectItem key={canton.id} value={canton.nombre}>{canton.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Ciudad / Cantón</Label>
+              <Select 
+                value={ciudadFilter} 
+                onValueChange={handleCiudadChange}
+                disabled={provinciaFilter === "all"}
+              >
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Ciudad" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light z-50">
+                  <SelectItem value="all">Todas las ciudades</SelectItem>
+                  {cantones.map((canton: any) => (
+                    <SelectItem key={canton.id} value={canton.nombre}>{canton.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
-              <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
-                <SelectValue placeholder="Sucursal" />
-              </SelectTrigger>
-              <SelectContent className="bg-admin-surface border-admin-border-light">
-                <SelectItem value="all">Todas las sucursales</SelectItem>
-                {sucursalesFiltradas.map((s: any) => (
-                  <SelectItem key={s.id} value={s.id}>{s.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Sucursal</Label>
+              <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Sucursal" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light">
+                  <SelectItem value="all">Todas las sucursales</SelectItem>
+                  {sucursalesFiltradas.map((s: any) => (
+                    <SelectItem key={s.id} value={s.id}>{s.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchTerm("");
-                setRegionFilter("all");
-                setProvinciaFilter("all");
-                setCiudadFilter("all");
-                setSucursalFilter("all");
-              }}
-            >
-              Limpiar
-            </Button>
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs">Estado</Label>
+              <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                <SelectTrigger className="bg-admin-bg border-admin-border-light text-admin-text-primary">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent className="bg-admin-surface border-admin-border-light">
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
+                  <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs invisible">Acción</Label>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  setSearchTerm("");
+                  setRegionFilter("all");
+                  setProvinciaFilter("all");
+                  setCiudadFilter("all");
+                  setSucursalFilter("all");
+                  setEstadoFilter("all");
+                }}
+              >
+                Limpiar
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

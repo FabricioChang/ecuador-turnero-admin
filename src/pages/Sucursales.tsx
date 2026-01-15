@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Plus, MapPin, Users, Monitor, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRegiones } from "@/hooks/useRegiones";
-import { useProvincias } from "@/hooks/useProvincias";
-import { useCantones } from "@/hooks/useCantones";
+import { useProvinciasDB } from "@/hooks/useProvinciasDB";
+import { useCantonesDB } from "@/hooks/useCantonesDB";
 import { useSucursales } from "@/hooks/useSucursales";
 
 const Sucursales = () => {
@@ -20,9 +21,16 @@ const Sucursales = () => {
 
   // Cargar datos desde la base de datos
   const { regiones } = useRegiones();
-  const { data: provincias = [] } = useProvincias();
-  const { data: cantones = [] } = useCantones();
+  const { data: provincias = [] } = useProvinciasDB();
   const { data: sucursalesDB = [], isLoading: loadingSucursales } = useSucursales();
+
+  // Obtener el ID de provincia seleccionada
+  const provinciaSeleccionada = useMemo(() => {
+    return provincias.find((p: any) => p.nombre === provinciaFilter);
+  }, [provinciaFilter, provincias]);
+
+  // Cargar cantones filtrados por provincia
+  const { data: cantones = [] } = useCantonesDB(provinciaSeleccionada?.id);
 
   // Filtrar provincias por región seleccionada
   const provinciasFiltradas = useMemo(() => {
@@ -30,12 +38,6 @@ const Sucursales = () => {
     const regionSeleccionada = regiones.find(r => r.id === regionFilter);
     return provincias.filter((p: any) => regionSeleccionada?.provincias.includes(p.nombre));
   }, [regionFilter, provincias, regiones]);
-
-  // Filtrar cantones por provincia seleccionada
-  const cantonesFiltrados = useMemo(() => {
-    if (provinciaFilter === "all") return cantones;
-    return cantones.filter((c: any) => c.provincia === provinciaFilter);
-  }, [provinciaFilter, cantones]);
 
   // Datos desde la base de datos
   const sucursales = sucursalesDB.map((suc: any) => ({
@@ -133,9 +135,9 @@ const Sucursales = () => {
           </div>
 
           {/* Filter Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-admin-text-primary">Región</label>
+              <Label className="text-admin-text-secondary text-xs">Región</Label>
               <Select value={regionFilter} onValueChange={handleRegionChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar región" />
@@ -150,7 +152,7 @@ const Sucursales = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-admin-text-primary">Provincia</label>
+              <Label className="text-admin-text-secondary text-xs">Provincia</Label>
               <Select 
                 value={provinciaFilter} 
                 onValueChange={handleProvinciaChange}
@@ -169,7 +171,7 @@ const Sucursales = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-admin-text-primary">Ciudad</label>
+              <Label className="text-admin-text-secondary text-xs">Ciudad / Cantón</Label>
               <Select 
                 value={ciudadFilter} 
                 onValueChange={setCiudadFilter}
@@ -180,7 +182,7 @@ const Sucursales = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border z-50">
                   <SelectItem value="all">Todas las ciudades</SelectItem>
-                  {cantonesFiltrados.map((canton: any) => (
+                  {cantones.map((canton: any) => (
                     <SelectItem key={canton.id} value={canton.nombre}>{canton.nombre}</SelectItem>
                   ))}
                 </SelectContent>
@@ -188,7 +190,7 @@ const Sucursales = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-admin-text-primary">Estado</label>
+              <Label className="text-admin-text-secondary text-xs">Estado</Label>
               <Select value={estadoFilter} onValueChange={setEstadoFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar estado" />
@@ -202,7 +204,8 @@ const Sucursales = () => {
               </Select>
             </div>
 
-            <div className="flex items-end">
+            <div className="space-y-2">
+              <Label className="text-admin-text-secondary text-xs invisible">Acción</Label>
               <Button variant="outline" onClick={clearFilters} className="w-full">
                 Limpiar Filtros
               </Button>
