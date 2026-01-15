@@ -48,40 +48,72 @@ export const useTurnoKPIs = () => {
         return { enEspera: 0, atendidos: 0, perdidos: 0, total: 0 };
       }
 
-      // Use parallel count queries with head:true to get exact counts without row limit
-      const [enEsperaRes, atendidosRes, perdidosRes, totalRes] = await Promise.all([
-        // En Espera count
+      // Query each status individually since .in() doesn't work with external client
+      const [
+        enEsperaRes,
+        pendienteRes,
+        enAtencionRes,
+        atendidosRes,
+        canceladoRes,
+        perdidoRes,
+        totalRes
+      ] = await Promise.all([
+        // en_espera
         (supabaseExternal as any)
           .from("turno")
           .select("id", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id)
-          .in("estado", ["en_espera", "espera", "pendiente", "en_atencion"]),
+          .eq("estado", "en_espera"),
         
-        // Atendidos count
+        // pendiente
+        (supabaseExternal as any)
+          .from("turno")
+          .select("id", { count: "exact", head: true })
+          .eq("cuenta_id", cuenta.id)
+          .eq("estado", "pendiente"),
+        
+        // en_atencion
+        (supabaseExternal as any)
+          .from("turno")
+          .select("id", { count: "exact", head: true })
+          .eq("cuenta_id", cuenta.id)
+          .eq("estado", "en_atencion"),
+        
+        // atendido
         (supabaseExternal as any)
           .from("turno")
           .select("id", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id)
           .eq("estado", "atendido"),
         
-        // Perdidos count
+        // cancelado
         (supabaseExternal as any)
           .from("turno")
           .select("id", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id)
-          .in("estado", ["cancelado", "perdido"]),
+          .eq("estado", "cancelado"),
         
-        // Total count
+        // perdido
+        (supabaseExternal as any)
+          .from("turno")
+          .select("id", { count: "exact", head: true })
+          .eq("cuenta_id", cuenta.id)
+          .eq("estado", "perdido"),
+        
+        // Total
         (supabaseExternal as any)
           .from("turno")
           .select("id", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id),
       ]);
 
+      const enEspera = (enEsperaRes.count ?? 0) + (pendienteRes.count ?? 0) + (enAtencionRes.count ?? 0);
+      const perdidos = (canceladoRes.count ?? 0) + (perdidoRes.count ?? 0);
+
       return {
-        enEspera: enEsperaRes.count ?? 0,
+        enEspera,
         atendidos: atendidosRes.count ?? 0,
-        perdidos: perdidosRes.count ?? 0,
+        perdidos,
         total: totalRes.count ?? 0,
       };
     },
