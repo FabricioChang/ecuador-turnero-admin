@@ -99,16 +99,17 @@ const Kioskos = () => {
     const matchesSearch = kiosko.identificador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          kiosko.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
     
+    // Filtro de estado siempre se aplica
+    const matchesEstado = estadoFilter === "all" || kiosko.estado === estadoFilter;
+    
     // Filtro por sucursal directa
     if (sucursalFilter !== "all") {
-      return matchesSearch && kiosko.sucursal_id === sucursalFilter;
+      return matchesSearch && kiosko.sucursal_id === sucursalFilter && matchesEstado;
     }
     
     // Filtros jerárquicos
     const sucursalIds = sucursalesFiltradas.map((s: any) => s.id);
     const matchesSucursal = sucursalIds.length === 0 || sucursalIds.includes(kiosko.sucursal_id);
-    
-    const matchesEstado = estadoFilter === "all" || kiosko.estado === estadoFilter;
     
     return matchesSearch && matchesSucursal && matchesEstado;
   });
