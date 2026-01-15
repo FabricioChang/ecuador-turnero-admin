@@ -58,7 +58,7 @@ export const exportTurnosDetalle = (turnosRaw: any[], filenameBase: string) => {
     // Get related entity names
     const categoriaNombre = turno.categoria?.nombre || "";
     const sucursalNombre = turno.sucursal?.nombre || "";
-    const kioskoNombre = turno.kiosko?.nombre || turno.kiosko?.codigo || "";
+    const kioskoNombre = turno.kiosko?.codigo || "";
 
     // Format dates - use emitido_en as the main creation date
     const fechaEmision = turno.emitido_en

@@ -23,7 +23,7 @@ export const useReportes = (
           *,
           categoria:categoria(id, nombre),
           sucursal:sucursal(id, nombre, region, provincia, ciudad),
-          kiosko:kiosko(id, codigo, nombre),
+          kiosko:kiosko(id, codigo),
           cliente:cliente(cedula, nombres, apellidos)
         `)
         .eq("cuenta_id", cuenta.id)
@@ -134,7 +134,7 @@ export const useReportes = (
       // Group by kiosko
       const actividadKioskos = turnos.reduce((acc: any[], turno: any) => {
         const kioId = turno.kiosko_id;
-        const kioNombre = turno.kiosko?.nombre || turno.kiosko?.codigo || 'Sin kiosko';
+        const kioNombre = turno.kiosko?.codigo || 'Sin kiosko';
         const existing = acc.find((k: any) => k.id === kioId);
         if (existing) {
           existing.turnos++;
