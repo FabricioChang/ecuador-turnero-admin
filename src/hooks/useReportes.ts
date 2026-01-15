@@ -21,7 +21,7 @@ export const useReportes = (
         .from("turno")
         .select(`
           *,
-          categoria:categoria(id, nombre, color),
+          categoria:categoria(id, nombre),
           sucursal:sucursal(id, nombre, region, provincia, ciudad),
           kiosko:kiosko(id, codigo, nombre),
           cliente:cliente(cedula, nombres, apellidos)
@@ -88,11 +88,18 @@ export const useReportes = (
         return acc;
       }, []).sort((a: any, b: any) => a.fecha.localeCompare(b.fecha));
 
-      // Group by category with real names
+      // Group by category with real names - assign colors dynamically
+      const categoryColors = [
+        "hsl(var(--chart-1))",
+        "hsl(var(--chart-2))",
+        "hsl(var(--chart-3))",
+        "hsl(var(--chart-4))",
+        "hsl(var(--chart-5))",
+        "hsl(var(--chart-6))",
+      ];
       const distribucionCategorias = turnos.reduce((acc: any[], turno: any) => {
         const catId = turno.categoria_id;
         const catNombre = turno.categoria?.nombre || 'Sin categoría';
-        const catColor = turno.categoria?.color;
         const existing = acc.find((c: any) => c.id === catId);
         if (existing) {
           existing.turnos++;
@@ -100,7 +107,7 @@ export const useReportes = (
           acc.push({
             id: catId,
             nombre: catNombre,
-            color: catColor,
+            color: categoryColors[acc.length % categoryColors.length],
             turnos: 1
           });
         }
