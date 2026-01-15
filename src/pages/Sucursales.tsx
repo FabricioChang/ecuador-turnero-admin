@@ -75,7 +75,7 @@ const Sucursales = () => {
     
     const matchesProvincia = provinciaFilter === "all" || sucursal.provincia === provinciaFilter;
     const matchesCiudad = ciudadFilter === "all" || sucursal.ciudad === ciudadFilter;
-    const matchesEstado = estadoFilter === "all" || sucursal.estado?.toLowerCase() === estadoFilter.toLowerCase();
+    const matchesEstado = estadoFilter === "all" || sucursal.estado === estadoFilter;
 
     return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesEstado;
   });
@@ -195,9 +195,9 @@ const Sucursales = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="activa">Activa</SelectItem>
-                  <SelectItem value="mantenimiento">En Mantenimiento</SelectItem>
-                  <SelectItem value="inactiva">Inactiva</SelectItem>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -235,7 +235,7 @@ const Sucursales = () => {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-admin-text-primary font-semibold truncate">{sucursal.nombre}</span>
                     <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 capitalize ${
-                      sucursal.estado === 'activa' 
+                      sucursal.estado === 'activo' 
                         ? 'bg-green-100 text-green-800' 
                         : sucursal.estado === 'mantenimiento'
                         ? 'bg-yellow-100 text-yellow-800'

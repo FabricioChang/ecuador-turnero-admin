@@ -134,18 +134,29 @@ const Pantallas = () => {
       const matchesSearch = pantalla.identificador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            pantalla.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Filtro por sucursal directa
+      // Filtro por sucursal directa (tiene prioridad)
       if (sucursalFilter !== "all") {
         return matchesSearch && pantalla.sucursal_id === sucursalFilter;
       }
       
-      // Filtros jerárquicos
-      const sucursalIds = sucursalesFiltradas.map((s: any) => s.id);
-      const matchesSucursal = sucursalIds.length === 0 || sucursalIds.includes(pantalla.sucursal_id);
+      // Filtro por región
+      let matchesRegion = true;
+      if (regionFilter !== "all") {
+        const regionData = regiones.find(r => r.id === regionFilter);
+        if (regionData && pantalla.sucursal) {
+          matchesRegion = regionData.provincias.includes(pantalla.sucursal.provincia);
+        }
+      }
       
-      return matchesSearch && matchesSucursal;
+      // Filtro por provincia
+      const matchesProvincia = provinciaFilter === "all" || pantalla.sucursal?.provincia === provinciaFilter;
+      
+      // Filtro por ciudad
+      const matchesCiudad = ciudadFilter === "all" || pantalla.sucursal?.ciudad === ciudadFilter;
+      
+      return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad;
     });
-  }, [pantallasDB, searchTerm, sucursalFilter, sucursalesFiltradas]);
+  }, [pantallasDB, searchTerm, sucursalFilter, regionFilter, provinciaFilter, ciudadFilter, regiones]);
 
   return (
     <section className="space-y-6">
