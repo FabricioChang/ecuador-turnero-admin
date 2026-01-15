@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, Monitor } from "lucide-react";
+import { ArrowLeft, Loader2, Monitor, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useProvinciasDB, type Provincia } from "@/hooks/useProvinciasDB";
@@ -47,9 +47,35 @@ const NuevaSucursal = () => {
   
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedKioskos, setSelectedKioskos] = useState<string[]>([]);
+  const [kioskoSearchTerm, setKioskoSearchTerm] = useState("");
 
-  // Fetch available kioskos (those without a sucursal assigned)
-  const { data: kioskos = [], isLoading: loadingKioskos } = useKioskos();
+  // Fetch available kioskos
+  const { data: kioskosRaw = [], isLoading: loadingKioskos } = useKioskos();
+
+  // Map kioskos with sucursal data
+  const kioskos = useMemo(() => {
+    return kioskosRaw.map((k: any) => ({
+      id: k.id,
+      identificador: k.codigo || k.identificador || "",
+      nombre: k.nombre || "",
+      sucursal_id: k.sucursal_id,
+      estado: k.estado || "activo",
+      provincia: k.sucursal?.provincia || "",
+      ciudad: k.sucursal?.ciudad || "",
+    }));
+  }, [kioskosRaw]);
+
+  // Filter kioskos based on search term
+  const filteredKioskos = useMemo(() => {
+    if (!kioskoSearchTerm.trim()) return kioskos;
+    const term = kioskoSearchTerm.toLowerCase();
+    return kioskos.filter((k: any) => 
+      k.identificador?.toLowerCase().includes(term) ||
+      k.nombre?.toLowerCase().includes(term) ||
+      k.provincia?.toLowerCase().includes(term) ||
+      k.ciudad?.toLowerCase().includes(term)
+    );
+  }, [kioskos, kioskoSearchTerm]);
 
   // Fetch provinces and cantones from database
   const { data: provincias = [], isLoading: loadingProvincias } = useProvinciasDB();
@@ -367,46 +393,80 @@ const NuevaSucursal = () => {
               Asignar Kioskos (Opcional)
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Selecciona los kioskos que deseas asignar a esta sucursal. Solo se muestran kioskos disponibles.
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Selecciona los kioskos que deseas asignar a esta sucursal.
             </p>
+            
+            {/* Search Filter */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por ID, nombre, provincia o ciudad..."
+                value={kioskoSearchTerm}
+                onChange={(e) => setKioskoSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
             {loadingKioskos ? (
-              <div className="flex items-center justify-center py-4">
+              <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : kioskos.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
-                No hay kioskos disponibles para asignar
+            ) : filteredKioskos.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                {kioskoSearchTerm ? "No se encontraron kioskos con ese criterio" : "No hay kioskos disponibles"}
               </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {kioskos.map((kiosko: any) => (
-                  <div
-                    key={kiosko.id}
-                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedKioskos.includes(kiosko.id)
-                        ? "border-admin-primary bg-admin-primary/10"
-                        : "border-admin-border-light hover:border-admin-border-medium"
-                    }`}
-                    onClick={() => handleKioskoToggle(kiosko.id)}
-                  >
-                    <Checkbox
-                      checked={selectedKioskos.includes(kiosko.id)}
-                      onCheckedChange={() => handleKioskoToggle(kiosko.id)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{kiosko.nombre}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {kiosko.identificador}
-                      </p>
+              <div className="border rounded-lg overflow-hidden">
+                {/* Table Header */}
+                <div className="grid grid-cols-[auto_1fr_1fr_1fr_100px] gap-2 p-3 bg-muted/50 border-b font-medium text-sm">
+                  <div className="w-6"></div>
+                  <div>ID</div>
+                  <div>Provincia</div>
+                  <div>Ciudad</div>
+                  <div>Estado</div>
+                </div>
+                
+                {/* Table Body */}
+                <div className="max-h-[300px] overflow-y-auto">
+                  {filteredKioskos.map((kiosko: any) => (
+                    <div
+                      key={kiosko.id}
+                      className={`grid grid-cols-[auto_1fr_1fr_1fr_100px] gap-2 p-3 border-b last:border-b-0 cursor-pointer transition-colors items-center text-sm ${
+                        selectedKioskos.includes(kiosko.id)
+                          ? "bg-admin-primary/10"
+                          : "hover:bg-muted/30"
+                      }`}
+                      onClick={() => handleKioskoToggle(kiosko.id)}
+                    >
+                      <Checkbox
+                        checked={selectedKioskos.includes(kiosko.id)}
+                        onCheckedChange={() => handleKioskoToggle(kiosko.id)}
+                        className="w-5 h-5"
+                      />
+                      <div className="truncate font-medium">{kiosko.identificador || kiosko.id.slice(0, 8)}</div>
+                      <div className="truncate text-muted-foreground">{kiosko.provincia || "-"}</div>
+                      <div className="truncate text-muted-foreground">{kiosko.ciudad || "-"}</div>
+                      <div>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          kiosko.estado === 'activo' 
+                            ? 'bg-green-100 text-green-700' 
+                            : kiosko.estado === 'mantenimiento'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                        }`}>
+                          {kiosko.estado}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
+            
             {selectedKioskos.length > 0 && (
-              <p className="text-sm text-admin-primary mt-3">
+              <p className="text-sm text-admin-primary font-medium">
                 {selectedKioskos.length} kiosko(s) seleccionado(s)
               </p>
             )}
