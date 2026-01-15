@@ -47,38 +47,57 @@ export const exportToCSV = (data: any[], filename: string) => {
 export const exportTurnosDetalle = (turnosRaw: any[], filenameBase: string) => {
   if (!turnosRaw || turnosRaw.length === 0) return;
 
-  const turnosDetallados = turnosRaw.map((turno: any) => ({
-    Numero: turno.numero,
-    Categoria: turno.categoria?.nombre || "N/A",
-    Sucursal: turno.sucursal?.nombre || "N/A",
-    // En la nueva BD el kiosko solo tiene id y nombre
-    Kiosko: turno.kiosko?.nombre || "N/A",
-    Cliente: turno.cliente_nombre || "N/A",
-    Identificacion: turno.cliente_identificacion || "N/A",
-    Estado: turno.estado,
-    "Fecha Creación": turno.fecha_creacion
-      ? format(new Date(turno.fecha_creacion), "dd/MM/yyyy HH:mm", {
-          locale: es,
-        })
-      : "",
-    "Fecha Llamado": turno.fecha_llamado
-      ? format(new Date(turno.fecha_llamado), "dd/MM/yyyy HH:mm", {
-          locale: es,
-        })
-      : "",
-    "Fecha Atención": turno.fecha_atencion
-      ? format(new Date(turno.fecha_atencion), "dd/MM/yyyy HH:mm", {
-          locale: es,
-        })
-      : "",
-    "Fecha Finalización": turno.fecha_finalizacion
-      ? format(new Date(turno.fecha_finalizacion), "dd/MM/yyyy HH:mm", {
-          locale: es,
-        })
-      : "",
-    "Tiempo Espera (min)": turno.tiempo_espera ?? 0,
-    "Tiempo Atención (min)": turno.tiempo_atencion ?? 0,
-  }));
+  const turnosDetallados = turnosRaw.map((turno: any) => {
+    // Get client name from joined data or fallback fields
+    const clienteNombre = turno.cliente
+      ? `${turno.cliente.nombres || ""} ${turno.cliente.apellidos || ""}`.trim()
+      : turno.cliente_nombre || "";
+    
+    const clienteIdentificacion = turno.cliente?.cedula || turno.cliente_identificacion || "";
+
+    // Get related entity names
+    const categoriaNombre = turno.categoria?.nombre || "";
+    const sucursalNombre = turno.sucursal?.nombre || "";
+    const kioskoNombre = turno.kiosko?.nombre || turno.kiosko?.codigo || "";
+
+    // Format dates - use emitido_en as the main creation date
+    const fechaEmision = turno.emitido_en
+      ? format(new Date(turno.emitido_en), "dd/MM/yyyy HH:mm", { locale: es })
+      : "";
+    const fechaLlamado = turno.llamado_en
+      ? format(new Date(turno.llamado_en), "dd/MM/yyyy HH:mm", { locale: es })
+      : "";
+    const fechaAtencion = turno.atendido_en
+      ? format(new Date(turno.atendido_en), "dd/MM/yyyy HH:mm", { locale: es })
+      : "";
+    const fechaFinalizacion = turno.finalizado_en
+      ? format(new Date(turno.finalizado_en), "dd/MM/yyyy HH:mm", { locale: es })
+      : "";
+
+    // Calculate times in minutes
+    const tiempoEsperaMin = turno.tiempo_espera 
+      ? Math.round(turno.tiempo_espera / 60) 
+      : 0;
+    const tiempoAtencionMin = turno.tiempo_atencion 
+      ? Math.round(turno.tiempo_atencion / 60) 
+      : 0;
+
+    return {
+      Numero: turno.numero || turno.codigo || "",
+      Categoria: categoriaNombre,
+      Sucursal: sucursalNombre,
+      Kiosko: kioskoNombre,
+      Cliente: clienteNombre,
+      Identificacion: clienteIdentificacion,
+      Estado: turno.estado || "",
+      "Fecha Emisión": fechaEmision,
+      "Fecha Llamado": fechaLlamado,
+      "Fecha Atención": fechaAtencion,
+      "Fecha Finalización": fechaFinalizacion,
+      "Tiempo Espera (min)": tiempoEsperaMin,
+      "Tiempo Atención (min)": tiempoAtencionMin,
+    };
+  });
 
   exportToCSV(turnosDetallados, `${filenameBase}_detalle`);
 };
