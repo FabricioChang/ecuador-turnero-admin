@@ -1,55 +1,84 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseExternal } from "@/lib/supabase-external";
+import { useCuenta } from "@/contexts/CuentaContext";
+import type { Kiosko } from "@/types/database";
 
-export interface Kiosko {
-  id: number;
-  identificador: string; // generado
-  nombre: string;
-  sucursal_id: number;
-  ubicacion: string | null;
-  estado: string;
-  created_at: string;
-  updated_at: string;
+export interface KioskoRow extends Kiosko {
   sucursal?: {
     nombre: string;
-    provincia?: { nombre: string };
-    canton?: { nombre: string };
+    region: string;
+    provincia: string;
+    ciudad: string;
   };
 }
 
 export const useKioskos = () => {
+  const { cuenta } = useCuenta();
+
   return useQuery({
-    queryKey: ["kioskos"],
+    queryKey: ["kioskos", cuenta?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("kioskos")
-        .select(
-          `
-          id,
-          nombre,
-          sucursal_id,
-          ubicacion,
-          estado,
-          created_at,
-          updated_at,
-          sucursal:sucursales(
+      if (!cuenta?.id) return [];
+      
+      const { data, error } = await supabaseExternal
+        .from("kiosko")
+        .select(`
+          *,
+          sucursal:sucursal(
             nombre,
-            provincia:provincias(nombre),
-            canton:cantones(nombre)
+            region,
+            provincia,
+            ciudad,
+            cuenta_id
           )
-        `
-        )
-        .order("nombre", { ascending: true });
+        `)
+        .order("codigo", { ascending: true });
 
       if (error) throw error;
-
-      const mapped =
-        (data || []).map((k: any) => ({
-          ...k,
-          identificador: String(k.id),
-        })) as Kiosko[];
-
-      return mapped;
+      
+      // Filtrar por cuenta_id a través de la sucursal
+      const filteredData = (data || []).filter(
+        (k: any) => k.sucursal?.cuenta_id === cuenta.id
+      );
+      
+      return filteredData as KioskoRow[];
     },
+    enabled: !!cuenta?.id,
+  });
+};
+
+export const useKiosko = (id: string) => {
+  const { cuenta } = useCuenta();
+
+  return useQuery({
+    queryKey: ["kiosko", id],
+    queryFn: async () => {
+      if (!id || !cuenta?.id) return null;
+
+      const { data, error } = await supabaseExternal
+        .from("kiosko")
+        .select(`
+          *,
+          sucursal:sucursal(
+            nombre,
+            region,
+            provincia,
+            ciudad,
+            cuenta_id
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      
+      // Verificar que pertenezca a la cuenta
+      if ((data as any).sucursal?.cuenta_id !== cuenta.id) {
+        throw new Error("Kiosko no encontrado");
+      }
+      
+      return data as KioskoRow;
+    },
+    enabled: !!id && !!cuenta?.id,
   });
 };

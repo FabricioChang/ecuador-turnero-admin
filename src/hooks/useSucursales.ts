@@ -1,56 +1,49 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseExternal } from "@/lib/supabase-external";
+import { useCuenta } from "@/contexts/CuentaContext";
+import type { Sucursal } from "@/types/database";
 
-export interface Sucursal {
-  id: number;
-  identificador: string; // generado
-  nombre: string;
-  provincia_id: number;
-  canton_id: number;
-  direccion: string | null;
-  telefono: string | null;  // mapeado desde telefono_sms
-  email: string | null;
-  estado: string;
-  created_at: string;
-  updated_at: string;
-  provincia?: { nombre: string };
-  canton?: { nombre: string };
-}
+export type SucursalRow = Sucursal;
 
 export const useSucursales = () => {
+  const { cuenta } = useCuenta();
+
   return useQuery({
-    queryKey: ["sucursales"],
+    queryKey: ["sucursales", cuenta?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sucursales")
-        .select(
-          `
-          id,
-          nombre,
-          provincia_id,
-          canton_id,
-          direccion,
-          telefono_sms,
-          email,
-          estado,
-          created_at,
-          updated_at,
-          provincia:provincias(nombre),
-          canton:cantones(nombre)
-        `
-        )
+      if (!cuenta?.id) return [];
+      
+      const { data, error } = await supabaseExternal
+        .from("sucursal")
+        .select("*")
+        .eq("cuenta_id", cuenta.id)
         .order("nombre", { ascending: true });
 
       if (error) throw error;
-
-      const mapped =
-        (data || []).map((s: any) => ({
-          ...s,
-          identificador: String(s.id),
-          telefono: s.telefono_sms ?? null,
-        })) as Sucursal[];
-
-      return mapped;
+      return data as SucursalRow[];
     },
+    enabled: !!cuenta?.id,
+  });
+};
+
+export const useSucursal = (id: string) => {
+  const { cuenta } = useCuenta();
+
+  return useQuery({
+    queryKey: ["sucursal", id],
+    queryFn: async () => {
+      if (!id || !cuenta?.id) return null;
+
+      const { data, error } = await supabaseExternal
+        .from("sucursal")
+        .select("*")
+        .eq("id", id)
+        .eq("cuenta_id", cuenta.id)
+        .single();
+
+      if (error) throw error;
+      return data as SucursalRow;
+    },
+    enabled: !!id && !!cuenta?.id,
   });
 };

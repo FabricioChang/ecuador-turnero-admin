@@ -3,30 +3,32 @@ import { Monitor, Building2, Users, Clock } from "lucide-react";
 import { useKioskos } from "@/hooks/useKioskos";
 import { useSucursales } from "@/hooks/useSucursales";
 import { useTurnos } from "@/hooks/useTurnos";
+import { useCuenta } from "@/contexts/CuentaContext";
 
 const Dashboard = () => {
+  const { cuenta } = useCuenta();
   const { data: kioskosData = [] } = useKioskos();
   const { data: sucursalesData = [] } = useSucursales();
   const { data: turnosData = [] } = useTurnos();
 
-  const kioskosActivos = kioskosData.filter((k: any) => k.estado === "activo").length;
-  const kioskosMantenimiento = kioskosData.filter((k: any) => k.estado === "mantenimiento").length;
-  const sucursalesActivas = sucursalesData.filter((s: any) => s.estado === "activo").length;
+  const kioskosActivos = kioskosData.filter((k) => k.estado === "activo").length;
+  const kioskosMantenimiento = kioskosData.filter((k) => k.estado === "inactivo").length;
+  const sucursalesActivas = sucursalesData.filter((s) => s.estado === "activo").length;
   
   const hoy = new Date().toISOString().split('T')[0];
-  const turnosHoy = turnosData.filter((t: any) => t.fecha_creacion?.startsWith(hoy));
-  const turnosCompletadosHoy = turnosHoy.filter((t: any) => t.estado === "atendido").length;
-  const turnosEnEspera = turnosData.filter((t: any) => t.estado === "pendiente").length;
+  const turnosHoy = turnosData.filter((t) => t.emitido_dia === hoy);
+  const turnosCompletadosHoy = turnosHoy.filter((t) => t.estado === "atendido").length;
+  const turnosEnEspera = turnosData.filter((t) => t.estado === "emitido" || t.estado === "llamado").length;
   
-  const tiemposEspera = turnosHoy.filter((t: any) => t.tiempo_espera !== null).map((t: any) => t.tiempo_espera);
-  const tiempoPromedio = tiemposEspera.length > 0 ? Math.round(tiemposEspera.reduce((a: number, b: number) => a + b, 0) / tiemposEspera.length) : 0;
+  const tiemposEspera = turnosHoy.filter((t) => t.tiempo_espera !== null).map((t) => t.tiempo_espera as number);
+  const tiempoPromedio = tiemposEspera.length > 0 ? Math.round(tiemposEspera.reduce((a, b) => a + b, 0) / tiemposEspera.length / 60) : 0;
 
   const stats = [
     {
       title: "Kioskos Activos",
       value: kioskosActivos.toString(),
       icon: Monitor,
-      description: `${kioskosMantenimiento} en mantenimiento`
+      description: `${kioskosMantenimiento} inactivos`
     },
     {
       title: "Sucursales",
@@ -35,7 +37,7 @@ const Dashboard = () => {
       description: "Operativas"
     },
     {
-      title: "Usuarios en Espera",
+      title: "En Espera",
       value: turnosEnEspera.toString(),
       icon: Users,
       description: `Tiempo promedio: ${tiempoPromedio} min`
@@ -52,7 +54,9 @@ const Dashboard = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-admin-text-primary">Dashboard</h1>
-        <p className="text-admin-text-secondary">Vista general del sistema turnero</p>
+        <p className="text-admin-text-secondary">
+          {cuenta ? `Cuenta: ${cuenta.nombre}` : "Vista general del sistema turnero"}
+        </p>
       </div>
 
       {/* Stats Grid */}
@@ -83,41 +87,51 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {turnosData.slice(0, 4).map((turno: any, index: number) => {
-                const fecha = new Date(turno.fecha_creacion);
+              {turnosData.slice(0, 5).map((turno, index) => {
+                const fecha = new Date(turno.emitido_en);
                 const tiempo = fecha.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
-                const estado = turno.estado === "atendido" ? "completado" : turno.estado;
-                return { time: tiempo, action: `Turno ${estado} #${turno.numero}`, location: turno.sucursal?.nombre || "Sin sucursal" };
-              }).map((activity, index) => (
-                <div key={index} className="flex items-center space-x-4 text-sm">
-                  <span className="text-xs text-admin-text-muted w-12">{activity.time}</span>
-                  <div className="flex-1">
-                    <p className="text-admin-text-primary">{activity.action}</p>
-                    <p className="text-admin-text-muted">{activity.location}</p>
+                const estadoLabel = turno.estado === "atendido" ? "completado" : turno.estado;
+                return (
+                  <div key={turno.id} className="flex items-center space-x-4 text-sm">
+                    <span className="text-xs text-admin-text-muted w-12">{tiempo}</span>
+                    <div className="flex-1">
+                      <p className="text-admin-text-primary">Turno {estadoLabel} #{turno.codigo}</p>
+                      <p className="text-admin-text-muted">{turno.sucursal?.nombre || "Sin sucursal"}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+              {turnosData.length === 0 && (
+                <p className="text-admin-text-muted text-center py-4">No hay actividad reciente</p>
+              )}
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-admin-surface border-admin-border-light">
           <CardHeader>
-            <CardTitle className="text-admin-text-primary">Estado del Sistema</CardTitle>
+            <CardTitle className="text-admin-text-primary">Sucursales</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { component: "Servidor Principal", status: "Operativo", color: "text-green-600" },
-                { component: "Base de Datos", status: "Operativo", color: "text-green-600" },
-                { component: "Red Kioskos", status: "Operativo", color: "text-green-600" },
-                { component: "Sistema Notificaciones", status: "En mantenimiento", color: "text-yellow-600" }
-              ].map((item, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-admin-text-primary">{item.component}</span>
-                  <span className={`text-sm font-medium ${item.color}`}>{item.status}</span>
+              {sucursalesData.slice(0, 5).map((sucursal) => (
+                <div key={sucursal.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-admin-text-primary font-medium">{sucursal.nombre}</p>
+                    <p className="text-admin-text-muted text-sm">{sucursal.ciudad}, {sucursal.provincia}</p>
+                  </div>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    sucursal.estado === "activo" 
+                      ? "bg-green-500/20 text-green-400" 
+                      : "bg-gray-500/20 text-gray-400"
+                  }`}>
+                    {sucursal.estado}
+                  </span>
                 </div>
               ))}
+              {sucursalesData.length === 0 && (
+                <p className="text-admin-text-muted text-center py-4">No hay sucursales registradas</p>
+              )}
             </div>
           </CardContent>
         </Card>
