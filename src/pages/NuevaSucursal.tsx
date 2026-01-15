@@ -4,28 +4,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Search, Monitor, Wifi, Settings, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useProvinciasDB, type Provincia } from "@/hooks/useProvinciasDB";
+import { useCantonesDB, type Canton } from "@/hooks/useCantonesDB";
 import { useCreateSucursal } from "@/hooks/useSucursalesMutations";
-import { PROVINCIAS_ECUADOR, findProvinciaByName, findCiudadInProvincia } from "@/data/ecuadorProvincias";
+import { supabase } from "@/integrations/supabase/client";
 
 // Lazy load the map component
 const LocationMap = lazy(() => import("@/components/LocationMap"));
 
-interface Kiosko {
-  id: number;
-  nombre: string;
-  categoria: string;
-  estado: string;
-  ubicacion: string;
-  tipo: string;
-  region: string;
-  provincia: string;
-  ciudad: string;
-  sucursal: string;
-}
+// Region mapping based on province
+const getRegionForProvincia = (provinciaNombre: string): string => {
+  const costaProvincias = ["Esmeraldas", "Manabí", "Guayas", "Santa Elena", "El Oro", "Los Ríos"];
+  const amazoniaProvincias = ["Sucumbíos", "Napo", "Orellana", "Pastaza", "Morona Santiago", "Zamora Chinchipe"];
+  const galapagosProvincias = ["Galápagos"];
+  
+  if (costaProvincias.some(p => provinciaNombre.includes(p))) return "Costa";
+  if (amazoniaProvincias.some(p => provinciaNombre.includes(p))) return "Amazonía";
+  if (galapagosProvincias.some(p => provinciaNombre.includes(p))) return "Galápagos";
+  return "Sierra";
+};
 
 const NuevaSucursal = () => {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ const NuevaSucursal = () => {
   const [formData, setFormData] = useState({
     nombre: "",
     provincia_id: "",
-    ciudad: "",
+    canton_id: "",
     direccion: "",
     email: "",
     telefono_sms: "",
@@ -43,124 +43,20 @@ const NuevaSucursal = () => {
   
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
 
-  const [searchKioskos, setSearchKioskos] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
-  const [provinciaFilter, setProvinciaFilter] = useState("");
-  const [ciudadFilter, setCiudadFilter] = useState("");
-  const [sucursalFilter, setSucursalFilter] = useState("");
-  const [estadoFilter, setEstadoFilter] = useState("");
-  const [selectedKioskos, setSelectedKioskos] = useState<number[]>([]);
+  // Fetch provinces and cantones from database
+  const { data: provincias = [], isLoading: loadingProvincias } = useProvinciasDB();
+  const { data: cantones = [], isLoading: loadingCantones } = useCantonesDB(formData.provincia_id);
 
-  // Get cities for selected province
-  const ciudadesDisponibles = useMemo(() => {
-    if (!formData.provincia_id) return [];
-    const provincia = PROVINCIAS_ECUADOR.find(p => p.id === formData.provincia_id);
-    return provincia?.ciudades || [];
-  }, [formData.provincia_id]);
-
-  // Filter provinces by region for kiosko filters
-  const provinciasFiltradas = useMemo(() => {
-    if (!regionFilter || regionFilter === "all") return PROVINCIAS_ECUADOR;
-    return PROVINCIAS_ECUADOR.filter(p => p.region.toLowerCase() === regionFilter.toLowerCase());
-  }, [regionFilter]);
-
-  const kioskosDisponibles: Kiosko[] = [
-    {
-      id: 1,
-      nombre: "Kiosko Táctil 001",
-      categoria: "Autoservicio",
-      estado: "Disponible",
-      ubicacion: "Sin asignar",
-      tipo: "Táctil",
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito",
-      sucursal: "Sin asignar"
-    },
-    {
-      id: 2,
-      nombre: "Kiosko Táctil 002",
-      categoria: "Información",
-      estado: "Disponible",
-      ubicacion: "Sin asignar",
-      tipo: "Táctil",
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito",
-      sucursal: "Sin asignar"
-    },
-    {
-      id: 3,
-      nombre: "Terminal Digital 001",
-      categoria: "Autoservicio",
-      estado: "Disponible",
-      ubicacion: "Sin asignar",
-      tipo: "Terminal",
-      region: "costa",
-      provincia: "Guayas",
-      ciudad: "Guayaquil",
-      sucursal: "Sin asignar"
-    },
-    {
-      id: 4,
-      nombre: "Kiosko Táctil 003",
-      categoria: "Pagos",
-      estado: "Disponible",
-      ubicacion: "Sin asignar",
-      tipo: "Táctil",
-      region: "sierra",
-      provincia: "Azuay",
-      ciudad: "Cuenca",
-      sucursal: "Sin asignar"
-    },
-    {
-      id: 5,
-      nombre: "Terminal Digital 002",
-      categoria: "Información",
-      estado: "Mantenimiento",
-      ubicacion: "Sin asignar",
-      tipo: "Terminal",
-      region: "costa",
-      provincia: "Guayas",
-      ciudad: "Guayaquil",
-      sucursal: "Sin asignar"
-    },
-    {
-      id: 6,
-      nombre: "Kiosko Táctil 004",
-      categoria: "Autoservicio",
-      estado: "Disponible",
-      ubicacion: "Sin asignar",
-      tipo: "Táctil",
-      region: "sierra",
-      provincia: "Pichincha",
-      ciudad: "Quito",
-      sucursal: "Sin asignar"
-    }
-  ];
-
-  const handleRegionChange = (value: string) => {
-    setRegionFilter(value);
-    setProvinciaFilter("");
-    setCiudadFilter("");
-  };
-
-  const handleProvinciaFilterChange = (value: string) => {
-    setProvinciaFilter(value);
-    setCiudadFilter("");
-  };
-
-  const filteredKioskos = kioskosDisponibles.filter(kiosko => {
-    const matchesSearch = kiosko.nombre.toLowerCase().includes(searchKioskos.toLowerCase()) ||
-                         kiosko.id.toString().includes(searchKioskos);
-    const matchesRegion = !regionFilter || regionFilter === "all" || kiosko.region === regionFilter;
-    const matchesProvincia = !provinciaFilter || provinciaFilter === "all" || kiosko.provincia === provinciaFilter;
-    const matchesCiudad = !ciudadFilter || ciudadFilter === "all" || kiosko.ciudad === ciudadFilter;
-    const matchesSucursal = !sucursalFilter || sucursalFilter === "all" || kiosko.sucursal === sucursalFilter;
-    const matchesEstado = !estadoFilter || estadoFilter === "all" || kiosko.estado === estadoFilter;
-    
-    return matchesSearch && matchesRegion && matchesProvincia && matchesCiudad && matchesSucursal && matchesEstado;
-  });
+  // Get selected provincia and canton names
+  const selectedProvincia = useMemo(() => 
+    provincias.find(p => p.id === formData.provincia_id),
+    [provincias, formData.provincia_id]
+  );
+  
+  const selectedCanton = useMemo(() => 
+    cantones.find(c => c.id === formData.canton_id),
+    [cantones, formData.canton_id]
+  );
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -170,45 +66,110 @@ const NuevaSucursal = () => {
     setFormData(prev => ({ 
       ...prev, 
       provincia_id: provinciaId,
-      ciudad: "" // Reset city when province changes
+      canton_id: "" // Reset canton when province changes
     }));
   };
 
-  const handleLocationSelect = (location: { lat: number; lng: number; direccion: string; provincia: string; ciudad: string }) => {
+  // Normalize text for comparison (remove accents, lowercase)
+  const normalizeText = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  };
+
+  // Find best matching provincia from geocoded name
+  const findMatchingProvincia = (provinciaName: string): Provincia | null => {
+    if (!provinciaName || provincias.length === 0) return null;
+    
+    const normalized = normalizeText(provinciaName);
+    
+    // Try exact match first
+    let match = provincias.find(p => normalizeText(p.nombre) === normalized);
+    if (match) return match;
+    
+    // Try partial match
+    match = provincias.find(p => 
+      normalizeText(p.nombre).includes(normalized) || 
+      normalized.includes(normalizeText(p.nombre))
+    );
+    if (match) return match;
+    
+    // Handle special cases (e.g., "Provincia de Pichincha" -> "Pichincha")
+    const cleanedName = normalized
+      .replace(/provincia de /gi, '')
+      .replace(/provincia del /gi, '');
+    
+    return provincias.find(p => normalizeText(p.nombre) === cleanedName) || null;
+  };
+
+  // Find best matching canton from geocoded name
+  const findMatchingCanton = (cantonName: string, cantonesForProvincia: Canton[]): Canton | null => {
+    if (!cantonName || cantonesForProvincia.length === 0) return null;
+    
+    const normalized = normalizeText(cantonName);
+    
+    // Try exact match first
+    let match = cantonesForProvincia.find(c => normalizeText(c.nombre) === normalized);
+    if (match) return match;
+    
+    // Try partial match
+    match = cantonesForProvincia.find(c => 
+      normalizeText(c.nombre).includes(normalized) || 
+      normalized.includes(normalizeText(c.nombre))
+    );
+    
+    return match || null;
+  };
+
+  const handleLocationSelect = async (location: { lat: number; lng: number; direccion: string; provincia: string; ciudad: string }) => {
+    console.log("Location selected:", location);
     setMapPosition({ lat: location.lat, lng: location.lng });
     
-    // Auto-fill address
+    // Auto-fill address first
     if (location.direccion) {
       setFormData(prev => ({ ...prev, direccion: location.direccion }));
     }
     
-    // Try to match provincia
+    // Try to match provincia from geocoded data
     if (location.provincia) {
-      const matchedProvincia = findProvinciaByName(location.provincia);
+      const matchedProvincia = findMatchingProvincia(location.provincia);
+      console.log("Matched provincia:", matchedProvincia);
+      
       if (matchedProvincia) {
+        // Update provincia
         setFormData(prev => ({ 
           ...prev, 
           provincia_id: matchedProvincia.id,
-          direccion: location.direccion || prev.direccion
+          direccion: location.direccion || prev.direccion,
+          canton_id: "" // Reset canton, will be set after
         }));
         
-        // Try to match ciudad within the provincia
+        // Now try to match canton - need to fetch cantones for this provincia
         if (location.ciudad) {
-          const matchedCiudad = findCiudadInProvincia(location.ciudad, matchedProvincia.id);
-          if (matchedCiudad) {
-            setFormData(prev => ({ ...prev, ciudad: matchedCiudad }));
+          try {
+            // Fetch cantones for the matched provincia
+            const { data: cantonesForProvincia } = await supabase
+              .from("cantones")
+              .select("*")
+              .eq("provincia_id", matchedProvincia.id)
+              .order("nombre");
+            
+            if (cantonesForProvincia && cantonesForProvincia.length > 0) {
+              const matchedCanton = findMatchingCanton(location.ciudad, cantonesForProvincia as Canton[]);
+              console.log("Matched canton:", matchedCanton);
+              
+              if (matchedCanton) {
+                setFormData(prev => ({ ...prev, canton_id: matchedCanton.id }));
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching cantones:", error);
           }
         }
       }
     }
-  };
-
-  const handleKioskoToggle = (kioskoId: number) => {
-    setSelectedKioskos(prev => 
-      prev.includes(kioskoId) 
-        ? prev.filter(id => id !== kioskoId)
-        : [...prev, kioskoId]
-    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -223,7 +184,7 @@ const NuevaSucursal = () => {
       return;
     }
 
-    if (!formData.provincia_id) {
+    if (!formData.provincia_id || !selectedProvincia) {
       toast({
         title: "Error",
         description: "La provincia es requerida",
@@ -232,50 +193,30 @@ const NuevaSucursal = () => {
       return;
     }
 
-    if (!formData.ciudad) {
+    if (!formData.canton_id || !selectedCanton) {
       toast({
         title: "Error",
-        description: "La ciudad es requerida",
+        description: "El cantón/ciudad es requerido",
         variant: "destructive"
       });
       return;
     }
 
-    // Get provincia name from ID
-    const provincia = PROVINCIAS_ECUADOR.find(p => p.id === formData.provincia_id);
+    // Calculate region based on provincia
+    const region = getRegionForProvincia(selectedProvincia.nombre);
 
     try {
       await createSucursal.mutateAsync({
         nombre: formData.nombre,
-        provincia: provincia?.nombre || "",
-        ciudad: formData.ciudad,
+        region: region,
+        provincia: selectedProvincia.nombre,
+        ciudad: selectedCanton.nombre,
         direccion: formData.direccion || undefined,
-        region: provincia?.region || "Sierra",
       });
 
       navigate('/sucursales');
     } catch (error) {
       console.error('Error al crear sucursal:', error);
-    }
-  };
-
-  const clearKioskoFilters = () => {
-    setSearchKioskos("");
-    setRegionFilter("");
-    setProvinciaFilter("");
-    setCiudadFilter("");
-    setSucursalFilter("");
-    setEstadoFilter("");
-  };
-
-  const getEstadoIcon = (estado: string) => {
-    switch (estado) {
-      case "Disponible":
-        return <Wifi className="h-4 w-4 text-green-600" />;
-      case "Mantenimiento":
-        return <Settings className="h-4 w-4 text-yellow-600" />;
-      default:
-        return <Monitor className="h-4 w-4 text-admin-text-muted" />;
     }
   };
 
@@ -322,12 +263,13 @@ const NuevaSucursal = () => {
                 <Select
                   value={formData.provincia_id}
                   onValueChange={handleProvinciaChange}
+                  disabled={loadingProvincias}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar provincia" />
+                    <SelectValue placeholder={loadingProvincias ? "Cargando..." : "Seleccionar provincia"} />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    {PROVINCIAS_ECUADOR.map((provincia) => (
+                    {provincias.map((provincia) => (
                       <SelectItem key={provincia.id} value={provincia.id}>
                         {provincia.nombre}
                       </SelectItem>
@@ -336,19 +278,25 @@ const NuevaSucursal = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ciudad">Ciudad *</Label>
+                <Label htmlFor="canton">Cantón/Ciudad *</Label>
                 <Select
-                  value={formData.ciudad}
-                  onValueChange={(value) => handleInputChange('ciudad', value)}
-                  disabled={!formData.provincia_id}
+                  value={formData.canton_id}
+                  onValueChange={(value) => handleInputChange('canton_id', value)}
+                  disabled={!formData.provincia_id || loadingCantones}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar ciudad" />
+                    <SelectValue placeholder={
+                      !formData.provincia_id 
+                        ? "Selecciona una provincia primero" 
+                        : loadingCantones 
+                          ? "Cargando..." 
+                          : "Seleccionar cantón"
+                    } />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    {ciudadesDisponibles.map((ciudad) => (
-                      <SelectItem key={ciudad} value={ciudad}>
-                        {ciudad}
+                    {cantones.map((canton) => (
+                      <SelectItem key={canton.id} value={canton.id}>
+                        {canton.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -369,6 +317,9 @@ const NuevaSucursal = () => {
             {/* Map Component */}
             <div className="space-y-2">
               <Label>Ubicación en el Mapa</Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Haz clic en el mapa o usa tu ubicación para autocompletar provincia, cantón y dirección
+              </p>
               <Suspense fallback={
                 <div className="h-[300px] rounded-lg border border-admin-border-light flex items-center justify-center bg-muted">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -383,167 +334,7 @@ const NuevaSucursal = () => {
           </CardContent>
         </Card>
 
-        {/* Asignación de Kioskos */}
-        <Card className="bg-admin-surface border-admin-border-light">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-admin-text-primary">
-              <span>Asignación de Kioskos</span>
-              <span className="text-sm font-normal text-admin-text-secondary">
-                {selectedKioskos.length} seleccionados
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Filtros de Kioskos */}
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-admin-text-muted" />
-                <Input
-                  placeholder="Buscar por identificador o nombre..."
-                  value={searchKioskos}
-                  onChange={(e) => setSearchKioskos(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div className="space-y-2">
-                  <Label>Región</Label>
-                  <Select value={regionFilter} onValueChange={handleRegionChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Región" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="costa">Costa</SelectItem>
-                      <SelectItem value="sierra">Sierra</SelectItem>
-                      <SelectItem value="amazonia">Amazonía</SelectItem>
-                      <SelectItem value="galapagos">Galápagos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Provincia</Label>
-                  <Select 
-                    value={provinciaFilter} 
-                    onValueChange={handleProvinciaFilterChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Provincia" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50 max-h-[300px]">
-                      <SelectItem value="all">Todas</SelectItem>
-                      {provinciasFiltradas.map(prov => (
-                        <SelectItem key={prov.id} value={prov.nombre}>{prov.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Ciudad</Label>
-                  <Select 
-                    value={ciudadFilter} 
-                    onValueChange={setCiudadFilter}
-                    disabled={!provinciaFilter || provinciaFilter === "all"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ciudad" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50 max-h-[300px]">
-                      <SelectItem value="all">Todas</SelectItem>
-                      {provinciaFilter && provinciaFilter !== "all" && 
-                        PROVINCIAS_ECUADOR.find(p => p.nombre === provinciaFilter)?.ciudades.map(ciudad => (
-                          <SelectItem key={ciudad} value={ciudad}>{ciudad}</SelectItem>
-                        ))
-                      }
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Sucursal</Label>
-                  <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sucursal" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="Sin asignar">Sin asignar</SelectItem>
-                      <SelectItem value="Sucursal Centro">Sucursal Centro</SelectItem>
-                      <SelectItem value="Sucursal Norte">Sucursal Norte</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Estado</Label>
-                  <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="Disponible">Disponible</SelectItem>
-                      <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Button type="button" variant="outline" onClick={clearKioskoFilters} className="w-full">
-                Limpiar Filtros
-              </Button>
-            </div>
-
-            {/* Lista de Kioskos */}
-            <div className="border border-admin-border-light rounded-lg max-h-96 overflow-y-auto">
-              {filteredKioskos.length === 0 ? (
-                <div className="p-8 text-center text-admin-text-muted">
-                  No se encontraron kioskos disponibles
-                </div>
-              ) : (
-                <div className="divide-y divide-admin-border-light">
-                  {filteredKioskos.map((kiosko) => (
-                    <div key={kiosko.id} className="p-4 hover:bg-admin-background-hover">
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id={`kiosko-${kiosko.id}`}
-                          checked={selectedKioskos.includes(kiosko.id)}
-                          onCheckedChange={() => handleKioskoToggle(kiosko.id)}
-                          disabled={kiosko.estado === 'Mantenimiento'}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium text-admin-text-primary truncate">
-                              {kiosko.nombre}
-                            </h4>
-                            <div className="flex items-center space-x-2">
-                              {getEstadoIcon(kiosko.estado)}
-                              <span className={`text-xs px-2 py-1 rounded-full ${
-                                kiosko.estado === 'Disponible' 
-                                  ? 'bg-green-100 text-green-700' 
-                                  : 'bg-yellow-100 text-yellow-700'
-                              }`}>
-                                {kiosko.estado}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-admin-text-muted mt-1">
-                            {kiosko.categoria} • {kiosko.tipo} • {kiosko.ciudad}, {kiosko.provincia}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Botones de Acción */}
+        {/* Action Buttons */}
         <div className="flex justify-end space-x-4">
           <Button
             type="button"
@@ -552,7 +343,11 @@ const NuevaSucursal = () => {
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={createSucursal.isPending}>
+          <Button
+            type="submit"
+            disabled={createSucursal.isPending}
+            className="bg-admin-primary hover:bg-admin-primary/90"
+          >
             {createSucursal.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

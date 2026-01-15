@@ -11,12 +11,10 @@ export const useCreateSucursal = () => {
   return useMutation({
     mutationFn: async (data: {
       nombre: string;
-      region?: string;
-      provincia?: string;
-      ciudad?: string;
+      region: string;
+      provincia: string;
+      ciudad: string;
       direccion?: string;
-      provincia_id?: string;
-      canton_id?: string;
     }) => {
       if (!cuenta?.id) throw new Error("No cuenta selected");
 
@@ -26,8 +24,8 @@ export const useCreateSucursal = () => {
           cuenta_id: cuenta.id,
           nombre: data.nombre,
           region: data.region || "Sierra",
-          provincia: data.provincia || "Pichincha",
-          ciudad: data.ciudad || "Quito",
+          provincia: data.provincia,
+          ciudad: data.ciudad,
           direccion: data.direccion || "",
           estado: "activo"
         });
@@ -64,12 +62,7 @@ export const useUpdateSucursal = () => {
       provincia?: string;
       ciudad?: string;
       direccion?: string | null;
-      email?: string | null;
-      telefono_sms?: string | null;
-      capacidad_maxima?: number | null;
       estado?: string;
-      provincia_id?: string;
-      canton_id?: string;
     }) => {
       const { error } = await (supabaseExternal as any)
         .from("sucursal")
