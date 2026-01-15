@@ -7,14 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Play, Image, Calendar, CheckCircle, XCircle, Monitor, Search, Filter } from "lucide-react";
+import { Plus, Upload, Play, Image, CheckCircle, XCircle, Monitor, Search, Filter, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRegiones } from "@/hooks/useRegiones";
 import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { useSucursales } from "@/hooks/useSucursales";
 import { usePantallas } from "@/hooks/usePantallas";
-import { usePublicidad } from "@/hooks/usePublicidad";
+import { usePublicidad, useUploadPublicidad, useDeletePublicidad } from "@/hooks/usePublicidad";
 
 const Publicidad = () => {
   const { toast } = useToast();
@@ -42,6 +42,9 @@ const Publicidad = () => {
   const { data: sucursalesDB = [] } = useSucursales();
   const { data: pantallasDB = [], isLoading: loadingPantallas } = usePantallas();
   const { data: publicidadDB = [], isLoading: loadingPublicidad } = usePublicidad();
+  const uploadPublicidad = useUploadPublicidad();
+  const deletePublicidad = useDeletePublicidad();
+  const [isUploading, setIsUploading] = useState(false);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -58,15 +61,30 @@ const Publicidad = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      toast({
-        title: "Contenido agregado",
-        description: "El contenido publicitario se ha subido correctamente",
-      });
-      setFormData({ nombre: '', archivo: null, duracion: '' });
-      setErrors({});
+    if (validateForm() && formData.archivo) {
+      setIsUploading(true);
+      try {
+        await uploadPublicidad.mutateAsync({
+          nombre: formData.nombre,
+          archivo: formData.archivo,
+          duracion: parseInt(formData.duracion, 10),
+        });
+        setFormData({ nombre: '', archivo: null, duracion: '' });
+        setErrors({});
+        // Reset file input
+        const fileInput = document.getElementById('archivo') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const handleDelete = async (item: any) => {
+    if (confirm(`¿Estás seguro de eliminar "${item.nombre}"?`)) {
+      await deletePublicidad.mutateAsync(item);
     }
   };
 
@@ -248,9 +266,17 @@ const Publicidad = () => {
               </div>
             </div>
 
-            <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <Upload className="h-4 w-4 mr-2" />
-              Subir Contenido
+            <Button 
+              type="submit" 
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              {isUploading ? "Subiendo..." : "Subir Contenido"}
             </Button>
           </form>
         </CardContent>
@@ -305,15 +331,25 @@ const Publicidad = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAssignToPantallas(item)}
-                        className="text-admin-text-primary"
-                      >
-                        <Monitor className="h-4 w-4 mr-1" />
-                        Asignar a Pantallas
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAssignToPantallas(item)}
+                          className="text-admin-text-primary"
+                        >
+                          <Monitor className="h-4 w-4 mr-1" />
+                          Asignar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(item)}
+                          className="text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
