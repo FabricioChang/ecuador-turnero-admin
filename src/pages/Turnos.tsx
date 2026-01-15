@@ -244,7 +244,7 @@ const Turnos = () => {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-admin-surface border-admin-border-light">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-admin-text-secondary">En Espera</CardTitle>
@@ -275,17 +275,6 @@ const Turnos = () => {
           <CardContent>
             <div className="text-2xl font-bold text-admin-text-primary">{kpis?.perdidos ?? 0}</div>
             <p className="text-xs text-admin-text-muted">No se presentaron</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-admin-surface border-admin-border-light">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-admin-text-secondary">Reagendados</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-admin-text-primary">{kpis?.reagendados ?? 0}</div>
-            <p className="text-xs text-admin-text-muted">Reprogramados</p>
           </CardContent>
         </Card>
       </div>

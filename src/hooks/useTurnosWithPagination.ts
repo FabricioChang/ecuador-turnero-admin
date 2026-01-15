@@ -34,7 +34,6 @@ export interface TurnoKPIs {
   enEspera: number;
   atendidos: number;
   perdidos: number;
-  reagendados: number;
   total: number;
 }
 
@@ -46,41 +45,34 @@ export const useTurnoKPIs = () => {
     queryKey: ["turno-kpis", cuenta?.id],
     queryFn: async (): Promise<TurnoKPIs> => {
       if (!cuenta?.id) {
-        return { enEspera: 0, atendidos: 0, perdidos: 0, reagendados: 0, total: 0 };
+        return { enEspera: 0, atendidos: 0, perdidos: 0, total: 0 };
       }
 
-      // Get counts for each status using separate count queries
-      const [enEsperaResult, atendidosResult, perdidosResult, reagendadosResult, totalResult] = await Promise.all([
-        // En espera: pendiente + en_atencion + espera + en_espera
-        supabaseExternal
+      // Get counts for each status using separate count queries with .or() filter
+      const [enEsperaResult, atendidosResult, perdidosResult, totalResult] = await Promise.all([
+        // En espera: pendiente, en_atencion, espera, en_espera
+        (supabaseExternal as any)
           .from("turno")
           .select("*", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id)
-          .in("estado", ["pendiente", "en_atencion", "espera", "en_espera"]),
+          .or("estado.eq.pendiente,estado.eq.en_atencion,estado.eq.espera,estado.eq.en_espera"),
         
         // Atendidos
-        supabaseExternal
+        (supabaseExternal as any)
           .from("turno")
           .select("*", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id)
           .eq("estado", "atendido"),
         
         // Perdidos: cancelado + perdido
-        supabaseExternal
+        (supabaseExternal as any)
           .from("turno")
           .select("*", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id)
-          .in("estado", ["cancelado", "perdido"]),
-        
-        // Reagendados
-        supabaseExternal
-          .from("turno")
-          .select("*", { count: "exact", head: true })
-          .eq("cuenta_id", cuenta.id)
-          .eq("estado", "reagendado"),
+          .or("estado.eq.cancelado,estado.eq.perdido"),
         
         // Total
-        supabaseExternal
+        (supabaseExternal as any)
           .from("turno")
           .select("*", { count: "exact", head: true })
           .eq("cuenta_id", cuenta.id),
@@ -90,7 +82,6 @@ export const useTurnoKPIs = () => {
         enEspera: enEsperaResult.count ?? 0,
         atendidos: atendidosResult.count ?? 0,
         perdidos: perdidosResult.count ?? 0,
-        reagendados: reagendadosResult.count ?? 0,
         total: totalResult.count ?? 0,
       };
     },
