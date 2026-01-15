@@ -48,38 +48,41 @@ export const useTurnoKPIs = () => {
         return { enEspera: 0, atendidos: 0, perdidos: 0, total: 0 };
       }
 
-      // Get all estados with a single query selecting only estado field
-      const { data, error } = await (supabaseExternal as any)
-        .from("turno")
-        .select("estado")
-        .eq("cuenta_id", cuenta.id);
-
-      if (error) {
-        console.error("Error fetching KPIs:", error);
-        return { enEspera: 0, atendidos: 0, perdidos: 0, total: 0 };
-      }
-
-      const turnos = data || [];
-      
-      // Count by estado
-      const enEspera = turnos.filter((t: any) => 
-        t.estado === "en_espera" || 
-        t.estado === "espera" || 
-        t.estado === "pendiente" || 
-        t.estado === "en_atencion"
-      ).length;
-      
-      const atendidos = turnos.filter((t: any) => t.estado === "atendido").length;
-      
-      const perdidos = turnos.filter((t: any) => 
-        t.estado === "cancelado" || t.estado === "perdido"
-      ).length;
+      // Use parallel count queries with head:true to get exact counts without row limit
+      const [enEsperaRes, atendidosRes, perdidosRes, totalRes] = await Promise.all([
+        // En Espera count
+        (supabaseExternal as any)
+          .from("turno")
+          .select("id", { count: "exact", head: true })
+          .eq("cuenta_id", cuenta.id)
+          .in("estado", ["en_espera", "espera", "pendiente", "en_atencion"]),
+        
+        // Atendidos count
+        (supabaseExternal as any)
+          .from("turno")
+          .select("id", { count: "exact", head: true })
+          .eq("cuenta_id", cuenta.id)
+          .eq("estado", "atendido"),
+        
+        // Perdidos count
+        (supabaseExternal as any)
+          .from("turno")
+          .select("id", { count: "exact", head: true })
+          .eq("cuenta_id", cuenta.id)
+          .in("estado", ["cancelado", "perdido"]),
+        
+        // Total count
+        (supabaseExternal as any)
+          .from("turno")
+          .select("id", { count: "exact", head: true })
+          .eq("cuenta_id", cuenta.id),
+      ]);
 
       return {
-        enEspera,
-        atendidos,
-        perdidos,
-        total: turnos.length,
+        enEspera: enEsperaRes.count ?? 0,
+        atendidos: atendidosRes.count ?? 0,
+        perdidos: perdidosRes.count ?? 0,
+        total: totalRes.count ?? 0,
       };
     },
     enabled: !!cuenta?.id,
