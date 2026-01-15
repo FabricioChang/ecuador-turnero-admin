@@ -16,7 +16,14 @@ export const useReportes = (
     queryFn: async () => {
       if (!cuenta?.id) return null;
 
-      // Query with joins to get related data
+      // Adjust dates to cover full days
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+
+      // Query with joins to get related data - remove default 1000 limit
       let query = (supabaseExternal as any)
         .from("turno")
         .select(`
@@ -25,10 +32,11 @@ export const useReportes = (
           sucursal:sucursal(id, nombre, region, provincia, ciudad),
           kiosko:kiosko(id, codigo),
           cliente:cliente(cedula, nombres, apellidos)
-        `)
+        `, { count: 'exact' })
         .eq("cuenta_id", cuenta.id)
-        .gte("emitido_en", dateFrom.toISOString())
-        .lte("emitido_en", dateTo.toISOString());
+        .gte("emitido_en", fromDate.toISOString())
+        .lte("emitido_en", toDate.toISOString())
+        .limit(10000);
 
       if (sucursalId && sucursalId !== "all") {
         query = query.eq("sucursal_id", sucursalId);
