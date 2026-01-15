@@ -245,14 +245,17 @@ const NuevaSucursal = () => {
     }
 
     try {
+      // Get the selected provincia and canton names
+      const selectedProvincia = provincias.find(p => p.id === formData.provincia_id);
+      const selectedCanton = cantones.find(c => c.id === formData.canton_id);
+      const region = selectedProvincia ? getRegionForProvincia(selectedProvincia.nombre) : "";
+
       const newSucursalId = await createSucursal.mutateAsync({
         nombre: formData.nombre,
-        provincia_id: formData.provincia_id,
-        canton_id: formData.canton_id,
+        region: region,
+        provincia: selectedProvincia?.nombre || "",
+        ciudad: selectedCanton?.nombre || "",
         direccion: formData.direccion || undefined,
-        email: formData.email || undefined,
-        telefono_sms: formData.telefono_sms || undefined,
-        capacidad_maxima: formData.capacidad_maxima ? parseInt(formData.capacidad_maxima) : undefined,
       });
 
       // Assign selected kioskos to the new sucursal
