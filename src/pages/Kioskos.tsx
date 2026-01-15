@@ -102,16 +102,27 @@ const Kioskos = () => {
     // Filtro de estado siempre se aplica
     const matchesEstado = estadoFilter === "all" || kiosko.estado === estadoFilter;
     
-    // Filtro por sucursal directa
+    // Filtro por sucursal directa (tiene prioridad)
     if (sucursalFilter !== "all") {
       return matchesSearch && kiosko.sucursal_id === sucursalFilter && matchesEstado;
     }
     
-    // Filtros jerárquicos
-    const sucursalIds = sucursalesFiltradas.map((s: any) => s.id);
-    const matchesSucursal = sucursalIds.length === 0 || sucursalIds.includes(kiosko.sucursal_id);
+    // Filtro por región - usando la provincia del kiosko
+    let matchesRegion = true;
+    if (regionFilter !== "all") {
+      const regionData = regiones.find(r => r.id === regionFilter);
+      if (regionData) {
+        matchesRegion = regionData.provincias.includes(kiosko.provincia);
+      }
+    }
     
-    return matchesSearch && matchesSucursal && matchesEstado;
+    // Filtro por provincia - comparando directamente con el campo provincia del kiosko
+    const matchesProvincia = provinciaFilter === "all" || kiosko.provincia === provinciaFilter;
+    
+    // Filtro por ciudad - comparando directamente con el campo ciudad del kiosko
+    const matchesCiudad = ciudadFilter === "all" || kiosko.ciudad === ciudadFilter;
+    
+    return matchesSearch && matchesEstado && matchesRegion && matchesProvincia && matchesCiudad;
   });
 
   const getEstadoColor = (estado: string) => {
