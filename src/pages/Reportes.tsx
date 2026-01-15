@@ -58,7 +58,6 @@ import { useProvincias } from "@/hooks/useProvincias";
 import { useCantones } from "@/hooks/useCantones";
 import { useToast } from "@/hooks/use-toast";
 import {
-  exportToCSV,
   exportTurnosDetalle,
 } from "@/utils/exportReportes";
 
@@ -191,20 +190,12 @@ const handleExport = () => {
     "yyyy-MM-dd"
   )}`;
 
-  const resumen = reportData.turnosPorDia.map((d) => ({
-    Fecha: format(new Date(d.fecha), "dd/MM/yyyy"),
-    "Turnos totales": d.turnos,
-    "Turnos completados": d.completados,
-  }));
-
-  // resumen agregado
-  exportToCSV(resumen, filenameBase);
-  // detalle de cada turno
+  // Solo exportar el detalle de turnos (un único archivo)
   exportTurnosDetalle(reportData.turnosRaw, filenameBase);
 
   toast({
     title: "Exportación completada",
-    description: "Los reportes fueron exportados en formato CSV.",
+    description: "El reporte fue exportado en formato CSV.",
   });
 };
 

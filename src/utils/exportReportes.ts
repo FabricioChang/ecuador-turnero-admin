@@ -29,14 +29,19 @@ export const exportToCSV = (data: any[], filename: string) => {
     type: "text/csv;charset=utf-8;",
   });
 
-  const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
   link.href = url;
   link.setAttribute("download", `${filename}.csv`);
+  link.style.display = "none";
   document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  
+  // Use setTimeout to prevent dialog crash
+  setTimeout(() => {
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100);
 };
 
 /**
@@ -78,9 +83,17 @@ export const exportTurnosDetalle = (turnosRaw: any[], filenameBase: string) => {
     const tiempoEsperaMin = turno.tiempo_espera 
       ? Math.round(turno.tiempo_espera / 60) 
       : 0;
-    const tiempoAtencionMin = turno.tiempo_atencion 
-      ? Math.round(turno.tiempo_atencion / 60) 
-      : 0;
+    
+    // Calculate tiempo de atención from llamado_en to atendido_en
+    let tiempoAtencionMin = 0;
+    if (turno.llamado_en && turno.atendido_en) {
+      const llamado = new Date(turno.llamado_en).getTime();
+      const atendido = new Date(turno.atendido_en).getTime();
+      const diffSeconds = (atendido - llamado) / 1000;
+      if (diffSeconds > 0 && !isNaN(diffSeconds)) {
+        tiempoAtencionMin = Math.round(diffSeconds / 60);
+      }
+    }
 
     return {
       Numero: turno.numero || turno.codigo || "",
