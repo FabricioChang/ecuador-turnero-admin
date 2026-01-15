@@ -48,41 +48,38 @@ export const useTurnoKPIs = () => {
         return { enEspera: 0, atendidos: 0, perdidos: 0, total: 0 };
       }
 
-      // Get counts for each status using separate count queries with .or() filter
-      const [enEsperaResult, atendidosResult, perdidosResult, totalResult] = await Promise.all([
-        // En espera: pendiente, en_atencion, espera, en_espera
-        (supabaseExternal as any)
-          .from("turno")
-          .select("*", { count: "exact", head: true })
-          .eq("cuenta_id", cuenta.id)
-          .or("estado.eq.pendiente,estado.eq.en_atencion,estado.eq.espera,estado.eq.en_espera"),
-        
-        // Atendidos
-        (supabaseExternal as any)
-          .from("turno")
-          .select("*", { count: "exact", head: true })
-          .eq("cuenta_id", cuenta.id)
-          .eq("estado", "atendido"),
-        
-        // Perdidos: cancelado + perdido
-        (supabaseExternal as any)
-          .from("turno")
-          .select("*", { count: "exact", head: true })
-          .eq("cuenta_id", cuenta.id)
-          .or("estado.eq.cancelado,estado.eq.perdido"),
-        
-        // Total
-        (supabaseExternal as any)
-          .from("turno")
-          .select("*", { count: "exact", head: true })
-          .eq("cuenta_id", cuenta.id),
-      ]);
+      // Get all estados with a single query selecting only estado field
+      const { data, error } = await (supabaseExternal as any)
+        .from("turno")
+        .select("estado")
+        .eq("cuenta_id", cuenta.id);
+
+      if (error) {
+        console.error("Error fetching KPIs:", error);
+        return { enEspera: 0, atendidos: 0, perdidos: 0, total: 0 };
+      }
+
+      const turnos = data || [];
+      
+      // Count by estado
+      const enEspera = turnos.filter((t: any) => 
+        t.estado === "en_espera" || 
+        t.estado === "espera" || 
+        t.estado === "pendiente" || 
+        t.estado === "en_atencion"
+      ).length;
+      
+      const atendidos = turnos.filter((t: any) => t.estado === "atendido").length;
+      
+      const perdidos = turnos.filter((t: any) => 
+        t.estado === "cancelado" || t.estado === "perdido"
+      ).length;
 
       return {
-        enEspera: enEsperaResult.count ?? 0,
-        atendidos: atendidosResult.count ?? 0,
-        perdidos: perdidosResult.count ?? 0,
-        total: totalResult.count ?? 0,
+        enEspera,
+        atendidos,
+        perdidos,
+        total: turnos.length,
       };
     },
     enabled: !!cuenta?.id,
