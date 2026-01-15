@@ -190,7 +190,7 @@ const Roles = () => {
         {/* Categories Sidebar */}
         <Card className="bg-admin-surface border-admin-border-light lg:col-span-1 h-fit">
           <CardHeader>
-            <CardTitle className="text-base">Categorías</CardTitle>
+            <CardTitle className="text-base">Grupos de permisos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-0">
             {categories.map((category) => {
