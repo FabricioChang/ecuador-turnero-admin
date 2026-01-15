@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Loader2, Monitor } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useProvinciasDB, type Provincia } from "@/hooks/useProvinciasDB";
 import { useCantonesDB, type Canton } from "@/hooks/useCantonesDB";
 import { useCreateSucursal } from "@/hooks/useSucursalesMutations";
+import { useKioskos } from "@/hooks/useKioskos";
+import { useUpdateKiosko } from "@/hooks/useKioskosMutations";
 import { supabase } from "@/integrations/supabase/client";
 
 // Lazy load the map component
@@ -30,6 +33,7 @@ const getRegionForProvincia = (provinciaNombre: string): string => {
 const NuevaSucursal = () => {
   const navigate = useNavigate();
   const createSucursal = useCreateSucursal();
+  const updateKiosko = useUpdateKiosko();
   
   const [formData, setFormData] = useState({
     nombre: "",
@@ -42,6 +46,10 @@ const NuevaSucursal = () => {
   });
   
   const [mapPosition, setMapPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedKioskos, setSelectedKioskos] = useState<string[]>([]);
+
+  // Fetch available kioskos (those without a sucursal assigned)
+  const { data: kioskos = [], isLoading: loadingKioskos } = useKioskos();
 
   // Fetch provinces and cantones from database
   const { data: provincias = [], isLoading: loadingProvincias } = useProvinciasDB();
@@ -172,6 +180,14 @@ const NuevaSucursal = () => {
     }
   };
 
+  const handleKioskoToggle = (kioskoId: string) => {
+    setSelectedKioskos(prev => 
+      prev.includes(kioskoId) 
+        ? prev.filter(id => id !== kioskoId)
+        : [...prev, kioskoId]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -202,17 +218,26 @@ const NuevaSucursal = () => {
       return;
     }
 
-    // Calculate region based on provincia
-    const region = getRegionForProvincia(selectedProvincia.nombre);
-
     try {
-      await createSucursal.mutateAsync({
+      const newSucursalId = await createSucursal.mutateAsync({
         nombre: formData.nombre,
-        region: region,
-        provincia: selectedProvincia.nombre,
-        ciudad: selectedCanton.nombre,
+        provincia_id: formData.provincia_id,
+        canton_id: formData.canton_id,
         direccion: formData.direccion || undefined,
+        email: formData.email || undefined,
+        telefono_sms: formData.telefono_sms || undefined,
+        capacidad_maxima: formData.capacidad_maxima ? parseInt(formData.capacidad_maxima) : undefined,
       });
+
+      // Assign selected kioskos to the new sucursal
+      if (selectedKioskos.length > 0 && newSucursalId) {
+        for (const kioskoId of selectedKioskos) {
+          await updateKiosko.mutateAsync({
+            id: kioskoId,
+            sucursal_id: newSucursalId,
+          });
+        }
+      }
 
       navigate('/sucursales');
     } catch (error) {
@@ -331,6 +356,60 @@ const NuevaSucursal = () => {
                 />
               </Suspense>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Asignación de Kioskos */}
+        <Card className="bg-admin-surface border-admin-border-light">
+          <CardHeader>
+            <CardTitle className="text-admin-text-primary flex items-center gap-2">
+              <Monitor className="h-5 w-5" />
+              Asignar Kioskos (Opcional)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Selecciona los kioskos que deseas asignar a esta sucursal. Solo se muestran kioskos disponibles.
+            </p>
+            {loadingKioskos ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : kioskos.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No hay kioskos disponibles para asignar
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {kioskos.map((kiosko: any) => (
+                  <div
+                    key={kiosko.id}
+                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      selectedKioskos.includes(kiosko.id)
+                        ? "border-admin-primary bg-admin-primary/10"
+                        : "border-admin-border-light hover:border-admin-border-medium"
+                    }`}
+                    onClick={() => handleKioskoToggle(kiosko.id)}
+                  >
+                    <Checkbox
+                      checked={selectedKioskos.includes(kiosko.id)}
+                      onCheckedChange={() => handleKioskoToggle(kiosko.id)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{kiosko.nombre}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {kiosko.identificador}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {selectedKioskos.length > 0 && (
+              <p className="text-sm text-admin-primary mt-3">
+                {selectedKioskos.length} kiosko(s) seleccionado(s)
+              </p>
+            )}
           </CardContent>
         </Card>
 
