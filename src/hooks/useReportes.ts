@@ -51,16 +51,22 @@ export const useReportes = (
       const totalTurnos = turnos.length;
       const turnosCompletados = turnos.filter((t: any) => t.estado === 'atendido').length;
       const tiemposEspera = turnos
-        .filter((t: any) => t.tiempo_espera !== null)
+        .filter((t: any) => t.tiempo_espera !== null && typeof t.tiempo_espera === 'number')
         .map((t: any) => t.tiempo_espera as number);
       
       const tiempoPromedioEspera = tiemposEspera.length > 0
         ? Math.round(tiemposEspera.reduce((a: number, b: number) => a + b, 0) / tiemposEspera.length / 60)
         : 0;
 
+      // Calculate tiempo de atención from llamado_en to atendido_en
       const tiemposAtencion = turnos
-        .filter((t: any) => t.tiempo_atencion !== null)
-        .map((t: any) => t.tiempo_atencion as number);
+        .filter((t: any) => t.llamado_en && t.atendido_en)
+        .map((t: any) => {
+          const llamado = new Date(t.llamado_en).getTime();
+          const atendido = new Date(t.atendido_en).getTime();
+          return (atendido - llamado) / 1000; // seconds
+        })
+        .filter((t: number) => t > 0 && !isNaN(t));
       
       const tiempoPromedioAtencion = tiemposAtencion.length > 0
         ? Math.round(tiemposAtencion.reduce((a: number, b: number) => a + b, 0) / tiemposAtencion.length / 60)
