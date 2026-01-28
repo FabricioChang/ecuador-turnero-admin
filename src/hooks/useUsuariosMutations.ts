@@ -42,20 +42,22 @@ export const useCreateUsuario = () => {
       if (existingUser?.id) {
         usuarioId = existingUser.id;
       } else {
+        // Generate UUID for the new usuario_admin
+        const newId = crypto.randomUUID();
+        
         // Create new usuario_admin
-        const { data: newUser, error: userError } = await (supabaseExternal as any)
+        const { error: userError } = await (supabaseExternal as any)
           .from("usuario_admin")
           .insert({
+            id: newId,
             email: data.email,
             nombre: data.nombre,
             pass_hash: data.password,
             super_admin: false,
-          })
-          .select("id")
-          .single();
+          });
 
         if (userError) throw userError;
-        usuarioId = newUser.id;
+        usuarioId = newId;
       }
 
       // Check if user is already a member of this account
@@ -70,30 +72,35 @@ export const useCreateUsuario = () => {
         throw new Error("Este usuario ya es miembro de la cuenta");
       }
 
+      // Generate UUID for the new miembro_cuenta
+      const miembroId = crypto.randomUUID();
+      
       // Add user as member of the account
-      const { data: newMember, error: memberError } = await (supabaseExternal as any)
+      const { error: memberError } = await (supabaseExternal as any)
         .from("miembro_cuenta")
         .insert({
+          id: miembroId,
           usuario_id: usuarioId,
           cuenta_id: cuenta.id,
           estado: "activo",
-        })
-        .select("id")
-        .single();
+        });
 
       if (memberError) throw memberError;
 
       // If a role was provided, assign it
-      if (data.rolId && newMember?.id) {
+      if (data.rolId) {
+        // Generate UUID for usuario_rol
+        const usuarioRolId = crypto.randomUUID();
         await (supabaseExternal as any)
           .from("usuario_rol")
           .insert({
-            miembro_id: newMember.id,
+            id: usuarioRolId,
+            miembro_id: miembroId,
             rol_id: data.rolId,
           });
       }
 
-      return { usuarioId, miembroId: newMember?.id };
+      return { usuarioId, miembroId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["usuarios_miembros"] });
