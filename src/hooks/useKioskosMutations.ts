@@ -13,17 +13,21 @@ export const useCreateKiosko = () => {
       ubicacion?: string | null;
       estado?: 'activo' | 'inactivo' | 'mantenimiento';
     }) => {
+      // Generate UUID for the new kiosko
+      const newId = crypto.randomUUID();
+      
       const { error } = await (supabaseExternal as any)
         .from("kiosko")
         .insert({
+          id: newId,
           sucursal_id: data.sucursal_id,
-          codigo: data.nombre.substring(0, 10).toUpperCase().replace(/\s/g, '-'),
+          codigo: data.nombre.substring(0, 30).toUpperCase().replace(/\s/g, '-'),
           ubicacion: data.ubicacion || null,
-          estado: data.estado === 'mantenimiento' ? 'inactivo' : (data.estado || 'activo')
+          estado: data.estado || 'activo'
         });
 
       if (error) throw error;
-      return true;
+      return newId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kioskos"] });
