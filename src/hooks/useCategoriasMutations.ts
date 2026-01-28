@@ -16,9 +16,12 @@ export const useCreateCategoria = () => {
     }) => {
       if (!cuenta?.id) throw new Error("No cuenta selected");
 
+      const newId = crypto.randomUUID();
+
       const { error } = await (supabaseExternal as any)
         .from("categoria")
         .insert({
+          id: newId,
           cuenta_id: cuenta.id,
           nombre: data.nombre,
           descripcion: data.descripcion || null,

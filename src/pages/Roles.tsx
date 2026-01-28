@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Shield, Save, CheckCircle2, Users, Building2, Monitor, Ticket, BarChart3, Settings, Plus, Loader2 } from "lucide-react";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useCustomRoles, useCustomRolePermissions, useUpdateCustomRolePermissions, useCreateCustomRole } from "@/hooks/useCustomRoles";
+import { usePermisosExternal, PermisoWithMeta } from "@/hooks/usePermisosExternal";
+import { useRolesExternal, useRolPermisosExternal, useUpdateRolPermisosExternal, useCreateRolExternal, Rol } from "@/hooks/useRolesExternal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -43,11 +43,11 @@ const Roles = () => {
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDescription, setNewRoleDescription] = useState("");
 
-  const { data: permissions = [], isLoading: loadingPermissions } = usePermissions();
-  const { data: customRoles = [], isLoading: loadingCustomRoles } = useCustomRoles();
-  const { data: rolePermissions = [], isLoading: loadingRolePermissions } = useCustomRolePermissions(selectedRoleId);
-  const updatePermissions = useUpdateCustomRolePermissions();
-  const createRole = useCreateCustomRole();
+  const { data: permissions = [], isLoading: loadingPermissions } = usePermisosExternal();
+  const { data: customRoles = [], isLoading: loadingCustomRoles } = useRolesExternal();
+  const { data: rolePermissions = [], isLoading: loadingRolePermissions } = useRolPermisosExternal(selectedRoleId);
+  const updatePermissions = useUpdateRolPermisosExternal();
+  const createRole = useCreateRolExternal();
 
   const permissionsByCategory = useMemo(() => {
     const grouped: Record<string, typeof permissions> = {};
@@ -108,8 +108,8 @@ const Roles = () => {
   const handleSavePermissions = async () => {
     if (!selectedRoleId) return;
     await updatePermissions.mutateAsync({
-      roleId: selectedRoleId,
-      permissionIds: Array.from(localPermissions)
+      rolId: selectedRoleId,
+      permisoIds: Array.from(localPermissions)
     });
     setHasChanges(false);
   };
@@ -123,7 +123,7 @@ const Roles = () => {
     
     await createRole.mutateAsync({
       nombre: newRoleName.trim(),
-      descripcion: newRoleDescription.trim() || undefined,
+      permisoIds: [],
     });
     
     setNewRoleName("");
@@ -210,15 +210,7 @@ const Roles = () => {
                     {role.es_sistema && (
                       <Badge variant="secondary" className="text-xs">Sistema</Badge>
                     )}
-                    <Badge variant="outline" className="text-xs">
-                      {role.identificador}
-                    </Badge>
                   </div>
-                  {role.descripcion && (
-                    <p className="text-xs text-admin-text-muted mt-2 line-clamp-2">
-                      {role.descripcion}
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             ))}
