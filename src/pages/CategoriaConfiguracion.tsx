@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Tag, Clock, Settings } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useCategorias } from "@/hooks/useCategorias";
@@ -22,14 +22,12 @@ const CategoriaConfiguracion = () => {
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
-    prioridad: "Media",
-    tiempoEsperaEstimado: "15",
+    prioridad: "regular",
+    activo: true,
     tiempoReagendamiento: "30",
-    estado: "Activa",
     limiteReagendamientos: "3",
     notificacionesAutomaticas: true,
-    alertasAdministrativas: false,
-    modoMantenimiento: false
+    alertasAdministrativas: false
   });
 
   useEffect(() => {
@@ -38,14 +36,12 @@ const CategoriaConfiguracion = () => {
       setFormData({
         nombre: categoria.nombre,
         descripcion: categoria.descripcion || "",
-        prioridad: "Media",
-        tiempoEsperaEstimado: Math.round((categoria.tiempo_prom_seg || 900) / 60).toString(),
-        tiempoReagendamiento: "30",
-        estado: categoria.activo ? "Activa" : "Inactiva",
-        limiteReagendamientos: "3",
-        notificacionesAutomaticas: true,
-        alertasAdministrativas: false,
-        modoMantenimiento: false
+        prioridad: categoria.prioridad || "regular",
+        activo: categoria.activo ?? true,
+        tiempoReagendamiento: (categoria.tiempo_reagendamiento_min || 30).toString(),
+        limiteReagendamientos: (categoria.limite_reagendamientos || 3).toString(),
+        notificacionesAutomaticas: categoria.notificaciones_automaticas ?? true,
+        alertasAdministrativas: categoria.alertas_administrativas ?? false
       });
     }
   }, [categorias, id]);
@@ -68,8 +64,12 @@ const CategoriaConfiguracion = () => {
       id,
       nombre: formData.nombre,
       descripcion: formData.descripcion || undefined,
-      tiempo_estimado: parseInt(formData.tiempoEsperaEstimado),
-      estado: formData.estado,
+      prioridad: formData.prioridad as 'regular' | 'preferente',
+      activo: formData.activo,
+      tiempo_reagendamiento_min: parseInt(formData.tiempoReagendamiento) || 30,
+      limite_reagendamientos: parseInt(formData.limiteReagendamientos) || 3,
+      notificaciones_automaticas: formData.notificacionesAutomaticas,
+      alertas_administrativas: formData.alertasAdministrativas
     });
   };
 
@@ -96,8 +96,14 @@ const CategoriaConfiguracion = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Información Básica */}
         <Card className="bg-admin-surface border-admin-border-light">
-          <CardHeader><CardTitle className="text-admin-text-primary">Información Básica</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-admin-text-primary">
+              <Tag className="h-5 w-5" />
+              Información Básica
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -105,12 +111,12 @@ const CategoriaConfiguracion = () => {
                 <Input id="nombre" value={formData.nombre} onChange={(e) => handleInputChange('nombre', e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="estado">Estado</Label>
-                <Select value={formData.estado} onValueChange={(value) => handleInputChange('estado', value)}>
+                <Label htmlFor="prioridad">Prioridad</Label>
+                <Select value={formData.prioridad} onValueChange={(value) => handleInputChange('prioridad', value)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Activa">Activa</SelectItem>
-                    <SelectItem value="Inactiva">Inactiva</SelectItem>
+                    <SelectItem value="preferente">Preferente</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -119,13 +125,96 @@ const CategoriaConfiguracion = () => {
               <Label htmlFor="descripcion">Descripción</Label>
               <Textarea id="descripcion" value={formData.descripcion} onChange={(e) => handleInputChange('descripcion', e.target.value)} rows={3} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="tiempoEsperaEstimado">Tiempo de Espera Estimado (min) *</Label>
-              <Input id="tiempoEsperaEstimado" type="number" min="1" value={formData.tiempoEsperaEstimado} onChange={(e) => handleInputChange('tiempoEsperaEstimado', e.target.value)} required />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Estado</Label>
+                <p className="text-sm text-admin-text-muted">
+                  Activar o desactivar esta categoría
+                </p>
+              </div>
+              <Switch
+                checked={formData.activo}
+                onCheckedChange={(checked) => handleInputChange('activo', checked)}
+              />
             </div>
           </CardContent>
         </Card>
 
+        {/* Configuración de Reagendamiento */}
+        <Card className="bg-admin-surface border-admin-border-light">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-admin-text-primary">
+              <Clock className="h-5 w-5" />
+              Configuración de Reagendamiento
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tiempoReagendamiento">Tiempo de Reagendamiento (minutos) *</Label>
+                <Input
+                  id="tiempoReagendamiento"
+                  type="number"
+                  min="1"
+                  max="180"
+                  value={formData.tiempoReagendamiento}
+                  onChange={(e) => handleInputChange('tiempoReagendamiento', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="limiteReagendamientos">Límite de Reagendamientos</Label>
+                <Input
+                  id="limiteReagendamientos"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={formData.limiteReagendamientos}
+                  onChange={(e) => handleInputChange('limiteReagendamientos', e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Configuración de Notificaciones */}
+        <Card className="bg-admin-surface border-admin-border-light">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-admin-text-primary">
+              <Settings className="h-5 w-5" />
+              Configuración de Notificaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Notificaciones Automáticas</Label>
+                <p className="text-sm text-admin-text-muted">
+                  Enviar notificaciones automáticas a usuarios sobre el estado de sus turnos
+                </p>
+              </div>
+              <Switch
+                checked={formData.notificacionesAutomaticas}
+                onCheckedChange={(checked) => handleInputChange('notificacionesAutomaticas', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Alertas Administrativas</Label>
+                <p className="text-sm text-admin-text-muted">
+                  Recibir alertas cuando los tiempos de espera excedan los límites establecidos
+                </p>
+              </div>
+              <Switch
+                checked={formData.alertasAdministrativas}
+                onCheckedChange={(checked) => handleInputChange('alertasAdministrativas', checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Zona de Peligro */}
         <Card className="bg-admin-surface border-red-200">
           <CardHeader><CardTitle className="text-red-600">Zona de Peligro</CardTitle></CardHeader>
           <CardContent>

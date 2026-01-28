@@ -12,7 +12,11 @@ export const useCreateCategoria = () => {
     mutationFn: async (data: {
       nombre: string;
       descripcion?: string;
-      tiempo_estimado?: number;
+      prioridad?: 'regular' | 'preferente';
+      tiempo_reagendamiento_min?: number;
+      limite_reagendamientos?: number;
+      notificaciones_automaticas?: boolean;
+      alertas_administrativas?: boolean;
     }) => {
       if (!cuenta?.id) throw new Error("No cuenta selected");
 
@@ -25,9 +29,12 @@ export const useCreateCategoria = () => {
           cuenta_id: cuenta.id,
           nombre: data.nombre,
           descripcion: data.descripcion || null,
-          tiempo_prom_seg: (data.tiempo_estimado || 15) * 60,
-          prioridad_default: "regular",
-          activo: true
+          prioridad: data.prioridad || 'regular',
+          activo: true,
+          tiempo_reagendamiento_min: data.tiempo_reagendamiento_min || 30,
+          limite_reagendamientos: data.limite_reagendamientos || 3,
+          notificaciones_automaticas: data.notificaciones_automaticas ?? true,
+          alertas_administrativas: data.alertas_administrativas ?? false
         });
 
       if (error) throw error;
@@ -59,16 +66,24 @@ export const useUpdateCategoria = () => {
       id: string;
       nombre: string;
       descripcion?: string;
-      tiempo_estimado?: number;
-      estado?: string;
+      prioridad?: 'regular' | 'preferente';
+      activo?: boolean;
+      tiempo_reagendamiento_min?: number;
+      limite_reagendamientos?: number;
+      notificaciones_automaticas?: boolean;
+      alertas_administrativas?: boolean;
     }) => {
       const { error } = await (supabaseExternal as any)
         .from("categoria")
         .update({
           nombre: data.nombre,
           descripcion: data.descripcion || null,
-          tiempo_prom_seg: (data.tiempo_estimado || 15) * 60,
-          activo: data.estado !== "Inactiva"
+          prioridad: data.prioridad || 'regular',
+          activo: data.activo ?? true,
+          tiempo_reagendamiento_min: data.tiempo_reagendamiento_min || 30,
+          limite_reagendamientos: data.limite_reagendamientos || 3,
+          notificaciones_automaticas: data.notificaciones_automaticas ?? true,
+          alertas_administrativas: data.alertas_administrativas ?? false
         })
         .eq("id", data.id);
 
