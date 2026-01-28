@@ -28,8 +28,8 @@ const Categorias = () => {
   const filteredCategorias = useMemo(() => {
     return categorias.filter(categoria => {
       const matchesSearch = categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesPrioridad = !prioridadFilter || categoria.prioridad === prioridadFilter;
-      const matchesEstado = !estadoFilter || 
+      const matchesPrioridad = !prioridadFilter || prioridadFilter === "todas" || categoria.prioridad === prioridadFilter;
+      const matchesEstado = !estadoFilter || estadoFilter === "todos" || 
         (estadoFilter === "activo" && categoria.activo) || 
         (estadoFilter === "inactivo" && !categoria.activo);
       return matchesSearch && matchesPrioridad && matchesEstado;
@@ -52,7 +52,7 @@ const Categorias = () => {
 
   const getPrioridadColor = (prioridad: string) => {
     switch (prioridad) {
-      case "preferencial":
+      case "preferente":
         return "bg-red-100 text-red-800";
       case "regular":
         return "bg-blue-100 text-blue-800";
@@ -63,8 +63,8 @@ const Categorias = () => {
 
   const getPrioridadLabel = (prioridad: string) => {
     switch (prioridad) {
-      case "preferencial":
-        return "Preferencial";
+      case "preferente":
+        return "Preferente";
       case "regular":
         return "Regular";
       default:
@@ -120,7 +120,6 @@ const Categorias = () => {
             />
           </div>
 
-          {/* Filter Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-admin-text-primary">Prioridad</Label>
@@ -129,7 +128,8 @@ const Categorias = () => {
                   <SelectValue placeholder="Todas las prioridades" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="preferencial">Preferencial</SelectItem>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  <SelectItem value="preferente">Preferente</SelectItem>
                   <SelectItem value="regular">Regular</SelectItem>
                 </SelectContent>
               </Select>
@@ -142,6 +142,7 @@ const Categorias = () => {
                   <SelectValue placeholder="Todos los estados" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="activo">Activo</SelectItem>
                   <SelectItem value="inactivo">Inactivo</SelectItem>
                 </SelectContent>
