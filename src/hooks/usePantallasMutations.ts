@@ -11,6 +11,7 @@ export const useCreatePantalla = () => {
       nombre: string;
       sucursal_id: string;
       estado?: string;
+      layout?: object;
     }) => {
       // Generate UUID for the new pantalla
       const newId = crypto.randomUUID();
@@ -21,7 +22,8 @@ export const useCreatePantalla = () => {
           id: newId,
           sucursal_id: data.sucursal_id,
           nombre: data.nombre,
-          estado: data.estado || 'activo'
+          layout: data.layout || {},
+          estado: data.estado || 'activo' // enum pantalla_estado uses 'activo' not 'activa'
         });
 
       if (error) throw error;

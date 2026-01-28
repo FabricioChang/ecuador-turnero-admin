@@ -77,7 +77,8 @@ const RegistrarPantalla = () => {
     await createPantalla.mutateAsync({
       nombre,
       sucursal_id: sucursalId,
-      estado: "activa",
+      estado: "activo", // enum pantalla_estado uses 'activo'
+      layout: {},
     });
     
     navigate("/pantallas");
