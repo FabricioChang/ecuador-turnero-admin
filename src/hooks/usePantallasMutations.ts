@@ -12,17 +12,20 @@ export const useCreatePantalla = () => {
       sucursal_id: string;
       estado?: string;
     }) => {
+      // Generate UUID for the new pantalla
+      const newId = crypto.randomUUID();
+      
       const { error } = await (supabaseExternal as any)
         .from("pantalla")
         .insert({
+          id: newId,
           sucursal_id: data.sucursal_id,
           nombre: data.nombre,
-          layout: {},
-          estado: 'activo'
+          estado: data.estado || 'activo'
         });
 
       if (error) throw error;
-      return true;
+      return newId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pantallas"] });
