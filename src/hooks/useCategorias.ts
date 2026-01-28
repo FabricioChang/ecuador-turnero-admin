@@ -1,9 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabaseExternal } from "@/lib/supabase-external";
 import { useCuenta } from "@/contexts/CuentaContext";
-import type { Categoria } from "@/types/database";
 
-export type CategoriaRow = Categoria;
+export interface CategoriaRow {
+  id: string;
+  cuenta_id: string;
+  nombre: string;
+  descripcion: string | null;
+  prioridad: 'regular' | 'preferente';
+  activo: boolean;
+  tiempo_reagendamiento_min: number;
+  limite_reagendamientos: number;
+  notificaciones_automaticas: boolean;
+  alertas_administrativas: boolean;
+}
 
 export const useCategorias = (sucursalId?: string) => {
   const { cuenta } = useCuenta();
@@ -34,7 +44,7 @@ export const useCategoria = (id: string) => {
     queryFn: async () => {
       if (!id || !cuenta?.id) return null;
 
-      const { data, error } = await supabaseExternal
+      const { data, error } = await (supabaseExternal as any)
         .from("categoria")
         .select("*")
         .eq("id", id)

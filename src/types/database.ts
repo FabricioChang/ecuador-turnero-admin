@@ -156,27 +156,36 @@ export interface Database {
           cuenta_id: string;
           nombre: string;
           descripcion: string | null;
-          tiempo_prom_seg: number;
-          prioridad_default: NaturalezaTurno;
+          prioridad: NaturalezaTurno;
           activo: boolean;
+          tiempo_reagendamiento_min: number;
+          limite_reagendamientos: number;
+          notificaciones_automaticas: boolean;
+          alertas_administrativas: boolean;
         };
         Insert: {
           id?: string;
           cuenta_id: string;
           nombre: string;
           descripcion?: string | null;
-          tiempo_prom_seg?: number;
-          prioridad_default?: NaturalezaTurno;
+          prioridad?: NaturalezaTurno;
           activo?: boolean;
+          tiempo_reagendamiento_min?: number;
+          limite_reagendamientos?: number;
+          notificaciones_automaticas?: boolean;
+          alertas_administrativas?: boolean;
         };
         Update: {
           id?: string;
           cuenta_id?: string;
           nombre?: string;
           descripcion?: string | null;
-          tiempo_prom_seg?: number;
-          prioridad_default?: NaturalezaTurno;
+          prioridad?: NaturalezaTurno;
           activo?: boolean;
+          tiempo_reagendamiento_min?: number;
+          limite_reagendamientos?: number;
+          notificaciones_automaticas?: boolean;
+          alertas_administrativas?: boolean;
         };
       };
       cliente: {

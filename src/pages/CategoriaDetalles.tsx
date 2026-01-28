@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Tag, Clock, TrendingUp, Edit, Loader2 } from "lucide-react";
+import { ArrowLeft, Tag, RefreshCw, TrendingUp, Edit, Loader2, Bell, AlertTriangle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCategoria } from "@/hooks/useCategorias";
 import { useTurnos } from "@/hooks/useTurnos";
@@ -18,7 +18,7 @@ const CategoriaDetalles = () => {
   
   // Calcular estadísticas reales
   const turnosAtendidos = turnosCategoria.filter((t: any) => t.estado === 'atendido').length;
-  const turnosEnEspera = turnosCategoria.filter((t: any) => t.estado === 'esperando').length;
+  const turnosEnEspera = turnosCategoria.filter((t: any) => t.estado === 'esperando' || t.estado === 'emitido').length;
   const turnosCancelados = turnosCategoria.filter((t: any) => t.estado === 'cancelado').length;
   const turnosLlamados = turnosCategoria.filter((t: any) => t.estado === 'llamado').length;
 
@@ -27,6 +27,7 @@ const CategoriaDetalles = () => {
       case "atendido":
         return "bg-green-100 text-green-800";
       case "esperando":
+      case "emitido":
         return "bg-blue-100 text-blue-800";
       case "llamado":
         return "bg-yellow-100 text-yellow-800";
@@ -34,6 +35,17 @@ const CategoriaDetalles = () => {
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getPrioridadLabel = (prioridad: string) => {
+    switch (prioridad) {
+      case "preferente":
+        return "Preferente";
+      case "regular":
+        return "Regular";
+      default:
+        return prioridad || "Regular";
     }
   };
 
@@ -116,16 +128,20 @@ const CategoriaDetalles = () => {
                 <div>
                   <label className="text-sm font-medium text-admin-text-muted">Prioridad</label>
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
-                      {categoria.prioridad_default || 'Normal'}
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      categoria.prioridad === 'preferente' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {getPrioridadLabel(categoria.prioridad)}
                     </span>
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-admin-text-muted">Tiempo Promedio</label>
+                  <label className="text-sm font-medium text-admin-text-muted">Reagendamiento</label>
                   <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-admin-text-muted" />
-                    <p className="text-admin-text-primary">{categoria.tiempo_prom_seg ? Math.round(categoria.tiempo_prom_seg / 60) : 0} minutos</p>
+                    <RefreshCw className="h-4 w-4 text-admin-text-muted" />
+                    <p className="text-admin-text-primary">
+                      {categoria.tiempo_reagendamiento_min || 30} min / máx {categoria.limite_reagendamientos || 3} veces
+                    </p>
                   </div>
                 </div>
               </div>
@@ -135,7 +151,26 @@ const CategoriaDetalles = () => {
                 <p className="text-admin-text-secondary mt-1">{categoria.descripcion || 'Sin descripción'}</p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Configuración de Notificaciones */}
+              <div className="border-t pt-4 mt-4">
+                <label className="text-sm font-medium text-admin-text-muted mb-2 block">Configuración de Notificaciones</label>
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Bell className={`h-4 w-4 ${categoria.notificaciones_automaticas ? 'text-green-600' : 'text-gray-400'}`} />
+                    <span className="text-sm text-admin-text-secondary">
+                      Notificaciones: {categoria.notificaciones_automaticas ? 'Activadas' : 'Desactivadas'}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className={`h-4 w-4 ${categoria.alertas_administrativas ? 'text-yellow-600' : 'text-gray-400'}`} />
+                    <span className="text-sm text-admin-text-secondary">
+                      Alertas Admin: {categoria.alertas_administrativas ? 'Activadas' : 'Desactivadas'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t pt-4 mt-4">
                 <div>
                   <label className="text-sm font-medium text-admin-text-muted">Turnos Atendidos</label>
                   <p className="text-lg font-semibold text-admin-text-primary">{turnosAtendidos}</p>

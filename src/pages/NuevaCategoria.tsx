@@ -17,9 +17,8 @@ const NuevaCategoria = () => {
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
-    prioridad: "",
-    tiempoEsperaEstimado: "",
-    tiempoReagendamiento: "",
+    prioridad: "regular",
+    tiempoReagendamiento: "30",
     limiteReagendamientos: "3",
     notificacionesAutomaticas: true,
     alertasAdministrativas: false
@@ -41,10 +40,10 @@ const NuevaCategoria = () => {
       return;
     }
 
-    if (!formData.tiempoEsperaEstimado || parseInt(formData.tiempoEsperaEstimado) <= 0) {
+    if (!formData.prioridad) {
       toast({
         title: "Error",
-        description: "El tiempo de espera estimado debe ser mayor a 0",
+        description: "La prioridad es requerida",
         variant: "destructive"
       });
       return;
@@ -53,7 +52,11 @@ const NuevaCategoria = () => {
     await createCategoria.mutateAsync({
       nombre: formData.nombre,
       descripcion: formData.descripcion || undefined,
-      tiempo_estimado: parseInt(formData.tiempoEsperaEstimado),
+      prioridad: formData.prioridad as 'regular' | 'preferente',
+      tiempo_reagendamiento_min: parseInt(formData.tiempoReagendamiento) || 30,
+      limite_reagendamientos: parseInt(formData.limiteReagendamientos) || 3,
+      notificaciones_automaticas: formData.notificacionesAutomaticas,
+      alertas_administrativas: formData.alertasAdministrativas
     });
 
     navigate('/categorias');
@@ -106,9 +109,8 @@ const NuevaCategoria = () => {
                     <SelectValue placeholder="Seleccionar prioridad" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Alta">Alta</SelectItem>
-                    <SelectItem value="Media">Media</SelectItem>
-                    <SelectItem value="Baja">Baja</SelectItem>
+                    <SelectItem value="preferente">Preferente</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -127,29 +129,16 @@ const NuevaCategoria = () => {
           </CardContent>
         </Card>
 
-        {/* Configuración de Tiempos */}
+        {/* Configuración de Reagendamiento */}
         <Card className="bg-admin-surface border-admin-border-light">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-admin-text-primary">
               <Clock className="h-5 w-5" />
-              Configuración de Tiempos
+              Configuración de Reagendamiento
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="tiempoEsperaEstimado">Tiempo de Espera Estimado (minutos) *</Label>
-                <Input
-                  id="tiempoEsperaEstimado"
-                  type="number"
-                  min="1"
-                  max="120"
-                  value={formData.tiempoEsperaEstimado}
-                  onChange={(e) => handleInputChange('tiempoEsperaEstimado', e.target.value)}
-                  placeholder="15"
-                  required
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="tiempoReagendamiento">Tiempo de Reagendamiento (minutos) *</Label>
                 <Input
@@ -178,9 +167,8 @@ const NuevaCategoria = () => {
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">Información sobre tiempos</h4>
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Información sobre reagendamiento</h4>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• <strong>Tiempo de Espera Estimado:</strong> Tiempo promedio que un usuario esperará para ser atendido</li>
                 <li>• <strong>Tiempo de Reagendamiento:</strong> Tiempo mínimo que debe esperar un usuario para reagendar su turno</li>
                 <li>• <strong>Límite de Reagendamientos:</strong> Número máximo de veces que un usuario puede reagendar</li>
               </ul>
@@ -238,12 +226,8 @@ const NuevaCategoria = () => {
               </div>
               <div>
                 <span className="text-admin-text-muted">Prioridad:</span>
-                <p className="font-medium text-admin-text-primary">{formData.prioridad || "Sin especificar"}</p>
-              </div>
-              <div>
-                <span className="text-admin-text-muted">Tiempo de Espera:</span>
                 <p className="font-medium text-admin-text-primary">
-                  {formData.tiempoEsperaEstimado ? `${formData.tiempoEsperaEstimado} min` : "Sin especificar"}
+                  {formData.prioridad === 'preferente' ? 'Preferente' : formData.prioridad === 'regular' ? 'Regular' : 'Sin especificar'}
                 </p>
               </div>
               <div>
@@ -260,6 +244,12 @@ const NuevaCategoria = () => {
                 <span className="text-admin-text-muted">Notificaciones:</span>
                 <p className="font-medium text-admin-text-primary">
                   {formData.notificacionesAutomaticas ? "Activadas" : "Desactivadas"}
+                </p>
+              </div>
+              <div>
+                <span className="text-admin-text-muted">Alertas Admin:</span>
+                <p className="font-medium text-admin-text-primary">
+                  {formData.alertasAdministrativas ? "Activadas" : "Desactivadas"}
                 </p>
               </div>
             </div>

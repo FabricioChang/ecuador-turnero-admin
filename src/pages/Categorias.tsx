@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Tag, Clock, Users, Search, Filter } from "lucide-react";
+import { Plus, Tag, RefreshCw, Users, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCategorias } from "@/hooks/useCategorias";
 
@@ -20,9 +20,12 @@ const Categorias = () => {
     id: cat.id,
     nombre: cat.nombre,
     descripcion: cat.descripcion || "Sin descripción",
-    tiempoPromedioSeg: cat.tiempo_prom_seg ?? 0,
-    prioridad: cat.prioridad_default || "regular",
-    activo: cat.activo ?? true
+    prioridad: cat.prioridad || "regular",
+    activo: cat.activo ?? true,
+    tiempoReagendamiento: cat.tiempo_reagendamiento_min ?? 30,
+    limiteReagendamientos: cat.limite_reagendamientos ?? 3,
+    notificacionesAutomaticas: cat.notificaciones_automaticas ?? true,
+    alertasAdministrativas: cat.alertas_administrativas ?? false
   }));
 
   const filteredCategorias = useMemo(() => {
@@ -70,18 +73,6 @@ const Categorias = () => {
       default:
         return prioridad;
     }
-  };
-
-  const formatTiempo = (segundos: number) => {
-    if (segundos < 60) {
-      return `${segundos} seg`;
-    }
-    const minutos = Math.floor(segundos / 60);
-    const segsRestantes = segundos % 60;
-    if (segsRestantes === 0) {
-      return `${minutos} min`;
-    }
-    return `${minutos} min ${segsRestantes} seg`;
   };
 
   return (
@@ -190,10 +181,10 @@ const Categorias = () => {
               </div>
 
               <div className="flex items-center space-x-2 min-w-0">
-                <Clock className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
+                <RefreshCw className="h-4 w-4 text-admin-text-muted flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-admin-text-primary">{formatTiempo(categoria.tiempoPromedioSeg)}</p>
-                  <p className="text-xs text-admin-text-muted">Tiempo promedio</p>
+                  <p className="text-sm font-medium text-admin-text-primary">{categoria.tiempoReagendamiento} min / {categoria.limiteReagendamientos} veces</p>
+                  <p className="text-xs text-admin-text-muted">Reagendamiento</p>
                 </div>
               </div>
               
